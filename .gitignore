@@ -1,0 +1,9 @@
+*.hex
+*.map
+*.dep
+*.wsdt
+*.rar
+*.zip
+*.sim
+*.log
+*.o
