@@ -16,8 +16,6 @@
 #include <cmath>
 #include <memory>
 
-#include "signal_generator\sig_gen_include.h"
-
 /**
   * @brief  Класс абстрактного сигнала
   */

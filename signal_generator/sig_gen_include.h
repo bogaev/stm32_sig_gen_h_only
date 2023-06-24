@@ -21,8 +21,7 @@ typedef struct
   uint8_t max_duty_cycle_percent;   // максимальная величина коэффициента заполнения в процентах
   uint8_t dead_time_th_percent;     // dead time в процентах от периода сигнала
   SIG_GEN_CoeffsInitStruct* coeffs; // ссылка на структуру коэффициентов для корректировки амплитуды
-}
-SIG_GEN_HandleTypeDef;
+} SIG_GEN_HandleTypeDef;
 
 SIG_GEN_StatusTypeDef SIG_GEN_Init(SIG_GEN_HandleTypeDef* sg_handle);
 SIG_GEN_StatusTypeDef SIG_GEN_Start(SIG_GEN_HandleTypeDef* sg_handle);

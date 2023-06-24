@@ -24,6 +24,7 @@
 namespace pwm_gen {
   class PwmGenerator;
 }
+
 /**
   * @brief  Вычисление значения модулированного сигнала
   */

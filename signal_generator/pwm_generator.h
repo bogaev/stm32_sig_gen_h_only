@@ -15,8 +15,8 @@
 #include <queue>
 
 #include "main.h"
-#include "signal_generator\sig_gen_include.h"
-#include "signal_generator\signal_modulator.hpp"
+
+#include "signal_generator\signal_modulator.h"
 
 namespace pwm_gen {
 

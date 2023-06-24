@@ -1,7 +1,7 @@
 #ifndef _SHARED_OBJECTS_H_
 #define _SHARED_OBJECTS_H_
 
-#include "utility\observer.h"
+#include "utility\observer.hpp"
 #include "common_\common.h"
 
 struct SharedObjects {
