@@ -16,10 +16,10 @@
 
 #include "main.h"
 #include "signal_generator\sig_gen_include.h"
-#include "signal_generator\signals.hpp"
-#include "utility\observer.hpp"
-#include "utility\shared_objects.hpp"
-#include "common_\common.h"
+#include "signal_generator\signals.h"
+#include "utility\observer.h"
+#include "utility\shared_objects.h"
+#include "app\common.h"
 
 namespace pwm_gen {
   class PwmGenerator;
@@ -190,7 +190,10 @@ inline FP_TYPE SignalModulator::GetPeriod(enSignals signal) const {
 }
 
 inline enSignalTypes SignalModulator::GetCarrierType() const {
-	return carrier_->GetSignalType();
+  if (carrier_) {
+    return carrier_->GetSignalType();
+  }
+  return SIG_GEN_TYPE_NONE;
 }
 
 inline uint32_t SignalModulator::GetSampleNum() const {
@@ -223,7 +226,7 @@ inline void SignalModulator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE va
       return;
     }
     if (param == SIG_GEN_PARAM_FREQ) {
-      amod_->SetParam(param, value/2);
+      amod_->SetParam(param, value / 2);
 //      amp_mod_period_ = uint32_t((1.f / amod_->GetFreq()) * sample_rate_);
       return;
     }

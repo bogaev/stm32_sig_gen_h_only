@@ -1,11 +1,11 @@
 #ifndef _SIGNAL_GENERATOR_H_
 #define _SIGNAL_GENERATOR_H_
 
-#include "common_\sig_gen_config.h"
-#include "common_\common.h"
+#include "app\sig_gen_config.h"
+#include "app\common.h"
 //#include "signal_generator\sig_gen.h"
-#include "signal_generator\pwm_controller.hpp"
-#include "utility\os_tasks_wrapper.hpp"
+#include "signal_generator\pwm_controller.h"
+#include "utility\os_tasks_wrapper.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -89,7 +89,7 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
   }
   
   //  FP_TYPE sample_rate = 
-  //    sg_handle->coeffs ? 
+  //    sg_handle->coeffs ?
   //      sg_handle->coeffs->freq_array[sg_handle->coeffs->freq_array_size-1].to * 2.
   //        : 1000.;
   
@@ -136,8 +136,7 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
                                             it_data_buf + next_buf_shift,
                                             IT_BUF_SIZE);
     ++it_gen_count_;
-  }
-	else if (sg_handle->pwm_mode == SIG_GEN_DMA_MODE) {
+  } else if (sg_handle->pwm_mode == SIG_GEN_DMA_MODE) {
     int next_buf_shift = dma_gen_count_ * DMA_BUF_SIZE;
     pwms_[sg_handle] = new DMA_PwmController(sg_handle->pwm_timer,
                                             {sg_handle->channels[0],

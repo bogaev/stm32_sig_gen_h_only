@@ -23,16 +23,16 @@
 #include "cmsis_os.h"
 #include "tim.h"
 
-#include "common_\common.h"
-#include "common_\sig_gen_config.h"
-#include "signal_generator\signals.hpp"
-#include "signal_generator\pwm_generator.hpp"
+#include "app\common.h"
+#include "app\sig_gen_config.h"
+#include "signal_generator\signals.h"
+#include "signal_generator\pwm_generator.h"
 
-#include "utility\os_tasks_wrapper.hpp"
-#include "utility\callback.hpp"
-#include "utility\observer.hpp"
-#include "utility\cpu_utils.hpp"
-#include "utility\shared_objects.hpp"
+#include "utility\os_tasks_wrapper.h"
+#include "utility\callback.h"
+#include "utility\observer.h"
+#include "utility\cpu_utils.h"
+#include "utility\shared_objects.h"
 
 class RTOSTaskWrapper;
 

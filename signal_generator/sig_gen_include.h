@@ -1,8 +1,8 @@
 #ifndef _SIG_GEN_WRAPPER_H_
 #define _SIG_GEN_WRAPPER_H_
 
-#include "common_\sig_gen_config.h"
-#include "common_\signal_typedefs.h"
+#include "app\sig_gen_config.h"
+#include "app\signal_typedefs.h"
 
 #include "main.h"
 
