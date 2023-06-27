@@ -25,6 +25,9 @@ typedef struct
 
 SIG_GEN_StatusTypeDef SIG_GEN_Init(SIG_GEN_HandleTypeDef* sg_handle);
 SIG_GEN_StatusTypeDef SIG_GEN_Start(SIG_GEN_HandleTypeDef* sg_handle);
+SIG_GEN_StatusTypeDef SIG_GEN_Stop(SIG_GEN_HandleTypeDef* sg_handle);
+SIG_GEN_StatusTypeDef SIG_GEN_Resume(SIG_GEN_HandleTypeDef* sg_handle);
+SIG_GEN_StatusTypeDef SIG_GEN_Pause(SIG_GEN_HandleTypeDef* sg_handle);
 SIG_GEN_StatusTypeDef SIG_GEN_Deinit(SIG_GEN_HandleTypeDef* sg_handle);
 SIG_GEN_StatusTypeDef SIG_GEN_SetSignalType(SIG_GEN_HandleTypeDef* sg_handle, enSignals signal, enSignalTypes type);
 SIG_GEN_StatusTypeDef SIG_GEN_SetCarrierAmp(SIG_GEN_HandleTypeDef* sg_handle, FP_TYPE value);

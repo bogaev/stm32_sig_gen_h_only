@@ -29,8 +29,10 @@ class SignalGenerator {
   
   // добавление нового генератора
   SIG_GEN_StatusTypeDef AddPwm(SIG_GEN_HandleTypeDef* sg_handle);
-  // добавление нового генератора
   SIG_GEN_StatusTypeDef Start(SIG_GEN_HandleTypeDef* sg_handle);
+  SIG_GEN_StatusTypeDef Stop(SIG_GEN_HandleTypeDef* sg_handle);
+  SIG_GEN_StatusTypeDef Resume(SIG_GEN_HandleTypeDef* sg_handle);
+  SIG_GEN_StatusTypeDef Pause(SIG_GEN_HandleTypeDef* sg_handle);
   // удаление генератора
   SIG_GEN_StatusTypeDef DeletePwm(SIG_GEN_HandleTypeDef* sg_handle);
   // изменение типа сигнала
@@ -76,6 +78,21 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(SIG_GEN_RangeCoeff
 
 inline SIG_GEN_StatusTypeDef SignalGenerator::Start(SIG_GEN_HandleTypeDef* sg_handle) {   
   pwms_.at(sg_handle)->Start();
+  return SIG_GEN_OK;
+}
+
+inline SIG_GEN_StatusTypeDef SignalGenerator::Stop(SIG_GEN_HandleTypeDef* sg_handle) {   
+  pwms_.at(sg_handle)->Stop();
+  return SIG_GEN_OK;
+}
+
+inline SIG_GEN_StatusTypeDef SignalGenerator::Resume(SIG_GEN_HandleTypeDef* sg_handle) {   
+  pwms_.at(sg_handle)->Resume();
+  return SIG_GEN_OK;
+}
+
+inline SIG_GEN_StatusTypeDef SignalGenerator::Pause(SIG_GEN_HandleTypeDef* sg_handle) {   
+  pwms_.at(sg_handle)->Pause();
   return SIG_GEN_OK;
 }
 

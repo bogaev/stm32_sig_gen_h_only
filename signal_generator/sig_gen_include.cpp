@@ -8,6 +8,18 @@ SIG_GEN_StatusTypeDef SIG_GEN_Start(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().Start(sg_handle);
 }
 
+SIG_GEN_StatusTypeDef SIG_GEN_Stop(SIG_GEN_HandleTypeDef* sg_handle) {
+  return SignalGenerator::GetInstance().Stop(sg_handle);
+}
+
+SIG_GEN_StatusTypeDef SIG_GEN_Resume(SIG_GEN_HandleTypeDef* sg_handle) {   
+  return SignalGenerator::GetInstance().Resume(sg_handle);
+}
+
+SIG_GEN_StatusTypeDef SIG_GEN_Pause(SIG_GEN_HandleTypeDef* sg_handle) {
+  return SignalGenerator::GetInstance().Pause(sg_handle);
+}
+
 SIG_GEN_StatusTypeDef SIG_GEN_Deinit(SIG_GEN_HandleTypeDef* sg_handle) {   
   return SignalGenerator::GetInstance().DeletePwm(sg_handle);
 }
