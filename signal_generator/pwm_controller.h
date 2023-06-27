@@ -13,7 +13,7 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
-#include <functional>
+#include <vector>
 //#include <assert.h>
 
 #include "FreeRTOS.h"
@@ -53,6 +53,8 @@ class PwmController : public _pattern::Observer<tdUartData> {
   
   virtual void Start() = 0;
   virtual void Stop() = 0;
+  virtual void Resume() {};
+  virtual void Pause() {};
   virtual void Run() = 0;
   virtual void ISR_Handler() = 0;
   virtual void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value);
@@ -61,11 +63,11 @@ class PwmController : public _pattern::Observer<tdUartData> {
   static void PWM_PulseHalfFinishedCallback(TIM_HandleTypeDef *htim);
   static void PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim);
   static void BindTimerToInstance(TIM_HandleTypeDef* htim, PwmController* ptr);
-  static PwmController* GetTimerInstance(TIM_HandleTypeDef* htim);
+  static std::vector<PwmController*> GetTimerInstance(TIM_HandleTypeDef* htim);
   static HAL_TIM_ActiveChannel GetActiveChannel(uint32_t tim_ch);
   void Update(tdUartData msg) override;
    
-  inline static PwmController* htim_to_inst[10] = {0}; /// таблица хендлер таймера -> экземпляр класса
+  inline static std::vector<std::vector<PwmController*>> htim_to_inst{10}; /// таблица хендлер таймера -> экземпляр класса
   TIM_HandleTypeDef* timer_ = nullptr; /// таймер ШИМ STM32
   tdPwmChannels channels_; /// каналы таймера ШИМ STM32
   pwm_gen::PwmGenerator generator_; /// генератор значений ШИМ
@@ -100,14 +102,20 @@ inline void PwmController::Update(tdUartData msg) {
   * @brief  Обработчик события "вывод половины значений буфера сигнала завершен"
   */
 inline void PwmController::PWM_PulseHalfFinishedCallback(TIM_HandleTypeDef *htim) {
-  GetTimerInstance(htim)->ISR_Handler();
+  auto handlers = GetTimerInstance(htim);
+  for (auto& handler : handlers) {
+    handler->ISR_Handler();
+  }
 }
 
 /**
   * @brief  Обработчик события "вывод всех значений буфера сигнала завершен"
   */
 inline void PwmController::PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
-  GetTimerInstance(htim)->ISR_Handler();
+  auto handlers = GetTimerInstance(htim);
+  for (auto& handler : handlers) {
+    handler->ISR_Handler();
+  }
 }
 
 /**
@@ -115,34 +123,34 @@ inline void PwmController::PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim) {
   */
 inline void PwmController::BindTimerToInstance(TIM_HandleTypeDef* htim, PwmController* ptr) {
   if (htim->Instance == TIM1) {
-    htim_to_inst[0] = ptr;
+    htim_to_inst[0].push_back(ptr);
   } else if (htim->Instance == TIM2) {
-    htim_to_inst[1] = ptr;
+    htim_to_inst[1].push_back(ptr);
   } else if (htim->Instance == TIM3) {
-    htim_to_inst[2] = ptr;
+    htim_to_inst[2].push_back(ptr);
   } else if (htim->Instance == TIM4) {
-    htim_to_inst[3] = ptr;
+    htim_to_inst[3].push_back(ptr);
   } else if (htim->Instance == TIM5) {
-    htim_to_inst[4] = ptr;
+    htim_to_inst[4].push_back(ptr);
   } else if (htim->Instance == TIM8) {
     if (ptr->channels_.pos_halfwave_channel == TIM_CHANNEL_1) {
-      htim_to_inst[5] = ptr;
+      htim_to_inst[5].push_back(ptr);
     } else {
-      htim_to_inst[6] = ptr;
+      htim_to_inst[6].push_back(ptr);
     }
   } else if (htim->Instance == TIM12) {
-    htim_to_inst[7] = ptr;
+    htim_to_inst[7].push_back(ptr);
   } else if (htim->Instance == TIM13) {
-    htim_to_inst[8] = ptr;
+    htim_to_inst[8].push_back(ptr);
   } else if (htim->Instance == TIM14) {
-    htim_to_inst[9] = ptr;
+    htim_to_inst[9].push_back(ptr);
   }
 }
 
 /**
   * @brief  Возвращает экземпляр класса (для обработчика прерывания)
   */
-inline PwmController* PwmController::GetTimerInstance(TIM_HandleTypeDef* htim) {
+inline std::vector<PwmController*> PwmController::GetTimerInstance(TIM_HandleTypeDef* htim) {
   if (htim->Instance == TIM1) {
     return htim_to_inst[0];
   } else if (htim->Instance == TIM2) {
@@ -203,6 +211,8 @@ class IT_PwmController : public PwmController {
   
   void Start() override;
   void Stop() override;
+  void Resume() override;
+  void Pause() override;
   void Run() override;
   void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) override;
 
@@ -210,6 +220,7 @@ class IT_PwmController : public PwmController {
   static void TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
   void ISR_Handler() override;
   void TaskPwmStart(void *argument);
+  void TaskBufUpd(void *argument); /// код задачи FreeRTOS обновления буфера
   void UpdateBuffer();
 
   TIM_HandleTypeDef* const sample_timer_; /// таймер семплирования сигнала
@@ -218,7 +229,9 @@ class IT_PwmController : public PwmController {
   uint32_t index_ = 0; /// текущий индекс массива значений сигнала
   osSemaphoreId_t pwm_start_;
   osSemaphoreId_t pwm_transfer_complete_;
+  osSemaphoreId_t calc_upd_buf_sem_;
   std::unique_ptr<RTOSTaskWrapper> task_start_; /// обёртка задачи FreeRTOS
+  std::unique_ptr<RTOSTaskWrapper> task_buf_upd_; /// обёртка задачи FreeRTOS
 };
 
 inline IT_PwmController::IT_PwmController(TIM_HandleTypeDef* timer,
@@ -232,37 +245,55 @@ inline IT_PwmController::IT_PwmController(TIM_HandleTypeDef* timer,
         , buf_ptr_(buf_ptr)
         , buf_size_(buf_size)
         , pwm_start_(osSemaphoreNew(1U, 1U, NULL))
-        , pwm_transfer_complete_(osSemaphoreNew(1U, 0U, NULL)) {
+        , pwm_transfer_complete_(osSemaphoreNew(1U, 0U, NULL))
+        , calc_upd_buf_sem_(osSemaphoreNew(1U, 0U, NULL)) {
   task_start_ = 
     std::make_unique<RTOSTaskWrapper>(
         "start", RTOS_TASK_STACK_SIZE, osPriorityHigh,
          std::function<void(void*)>(std::bind(&IT_PwmController::TaskPwmStart, this, std::placeholders::_1)));
+
+  task_buf_upd_ = 
+    std::make_unique<RTOSTaskWrapper>("buf_upd", RTOS_TASK_STACK_SIZE, osPriorityNormal,
+                                      std::function<void(void*)>(std::bind(&IT_PwmController::TaskBufUpd, this, std::placeholders::_1)));
   
   HAL_TIM_RegisterCallback(sample_timer_, HAL_TIM_PERIOD_ELAPSED_CB_ID, TIM_PeriodElapsedCallback);
   BindTimerToInstance(sample_timer_, this);
   task_start_->Create();
+  task_buf_upd_->Create();
 }
 
 inline IT_PwmController::~IT_PwmController() {
   Stop();
+  task_buf_upd_->Delete();
+  task_start_->Delete();
 }
 
 inline void IT_PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
   PwmController::SetSignal(signal, param, value);
+  osSemaphoreRelease(calc_upd_buf_sem_);
 }
 
 inline void IT_PwmController::Start() {
-  UpdateBuffer();
   HAL_TIM_Base_Start_IT(sample_timer_);
   HAL_TIM_PWM_Start_IT(timer_, channels_.pos_halfwave_channel);
   HAL_TIM_PWM_Start_IT(timer_, channels_.neg_halfwave_channel);
 }
 
 inline void IT_PwmController::Stop() {
-  task_start_->Delete();
   HAL_TIM_PWM_Stop_IT(timer_, channels_.neg_halfwave_channel);
   HAL_TIM_PWM_Stop_IT(timer_, channels_.pos_halfwave_channel);
   HAL_TIM_Base_Stop_IT(sample_timer_);
+}
+
+inline void IT_PwmController::Resume() {
+  index_ = 0;
+  HAL_TIM_PWM_Start_IT(timer_, channels_.pos_halfwave_channel);
+  HAL_TIM_PWM_Start_IT(timer_, channels_.neg_halfwave_channel);
+}
+
+inline void IT_PwmController::Pause() {
+  HAL_TIM_PWM_Stop_IT(timer_, channels_.neg_halfwave_channel);
+  HAL_TIM_PWM_Stop_IT(timer_, channels_.pos_halfwave_channel);
 }
 
 inline void IT_PwmController::Run() {
@@ -289,15 +320,30 @@ inline void IT_PwmController::TaskPwmStart(void *argument) {
   }
 }
 
+/**
+  * @brief  Метод, содержащий код задачи FreeRTOS которая обновляет буфер значений
+  */
+inline void IT_PwmController::TaskBufUpd(void *argument) {
+  for(;;) {
+    if (osSemaphoreAcquire(calc_upd_buf_sem_, osWaitForever) == osOK) {
+      UpdateBuffer();
+    }
+  }
+}
+
 inline void IT_PwmController::ISR_Handler() {
   Run();
 }
 
 inline void IT_PwmController::TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  GetTimerInstance(htim)->ISR_Handler();
+  auto handlers = GetTimerInstance(htim);
+  for (auto& handler : handlers) {
+    handler->ISR_Handler();
+  }
 }
 
 inline void IT_PwmController::UpdateBuffer() {
+  Pause();
   for (size_t i = 0; i < buf_size_; ++i) {
     if (generator_.IsNegHalfwave()) {
       buf_ptr_[i] = (-1) * (IT_BUF_DATA_TYPE) generator_.GetValue();
@@ -305,6 +351,7 @@ inline void IT_PwmController::UpdateBuffer() {
       buf_ptr_[i] = (IT_BUF_DATA_TYPE) generator_.GetValue();
     }
   }
+  Resume();
 }
 
 // class DMA_PwmController ============================================================
