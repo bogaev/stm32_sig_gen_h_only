@@ -58,6 +58,7 @@ class PwmController : public _pattern::Observer<tdUartData> {
   virtual void Run() = 0;
   virtual void ISR_Handler() = 0;
   virtual void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value);
+  virtual bool IsPaused() const { return false; }
   
  protected:  
   static void PWM_PulseHalfFinishedCallback(TIM_HandleTypeDef *htim);
@@ -215,6 +216,7 @@ class IT_PwmController : public PwmController {
   void Pause() override;
   void Run() override;
   void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) override;
+  bool IsPaused() const override;
 
  private:
   static void TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim);
@@ -227,6 +229,7 @@ class IT_PwmController : public PwmController {
   IT_BUF_DATA_TYPE* const buf_ptr_; /// указатель на начало буфера значений сигнала
   const uint32_t buf_size_; /// размер буфера значений сигнала
   uint32_t index_ = 0; /// текущий индекс массива значений сигнала
+  bool is_paused_ = false; /// текущий индекс массива значений сигнала
   osSemaphoreId_t pwm_start_;
   osSemaphoreId_t pwm_transfer_complete_;
   osSemaphoreId_t calc_upd_buf_sem_;
@@ -287,13 +290,17 @@ inline void IT_PwmController::Stop() {
 
 inline void IT_PwmController::Resume() {
   index_ = 0;
-  HAL_TIM_PWM_Start_IT(timer_, channels_.pos_halfwave_channel);
-  HAL_TIM_PWM_Start_IT(timer_, channels_.neg_halfwave_channel);
+  is_paused_ = false;
 }
 
 inline void IT_PwmController::Pause() {
-  HAL_TIM_PWM_Stop_IT(timer_, channels_.neg_halfwave_channel);
-  HAL_TIM_PWM_Stop_IT(timer_, channels_.pos_halfwave_channel);
+  is_paused_ = true;
+  __HAL_TIM_SET_COMPARE(timer_, channels_.pos_halfwave_channel, 0);
+  __HAL_TIM_SET_COMPARE(timer_, channels_.neg_halfwave_channel, 0);
+}
+
+inline bool IT_PwmController::IsPaused() const {
+  return is_paused_;
 }
 
 inline void IT_PwmController::Run() {
@@ -336,14 +343,16 @@ inline void IT_PwmController::ISR_Handler() {
 }
 
 inline void IT_PwmController::TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  auto handlers = GetTimerInstance(htim);
-  for (auto& handler : handlers) {
-    handler->ISR_Handler();
+  auto instances = GetTimerInstance(htim);
+  for (auto* instance : instances) {
+    if (!instance->IsPaused()) {
+      instance->ISR_Handler();
+    }
   }
 }
 
 inline void IT_PwmController::UpdateBuffer() {
-  Pause();
+//  Pause();
   for (size_t i = 0; i < buf_size_; ++i) {
     if (generator_.IsNegHalfwave()) {
       buf_ptr_[i] = (-1) * (IT_BUF_DATA_TYPE) generator_.GetValue();
@@ -351,7 +360,7 @@ inline void IT_PwmController::UpdateBuffer() {
       buf_ptr_[i] = (IT_BUF_DATA_TYPE) generator_.GetValue();
     }
   }
-  Resume();
+//  Resume();
 }
 
 // class DMA_PwmController ============================================================
