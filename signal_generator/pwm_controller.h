@@ -238,11 +238,11 @@ class IT_PwmController : public PwmController {
 };
 
 inline IT_PwmController::IT_PwmController(TIM_HandleTypeDef* timer,
-																				 tdPwmChannels channels,
-																				 pwm_gen::PwmGenerator generator,
-																				 TIM_HandleTypeDef* sample_timer,
-																				 IT_BUF_DATA_TYPE* buf_ptr,
-																				 uint32_t buf_size)
+					 tdPwmChannels channels,
+					 pwm_gen::PwmGenerator generator,
+					 TIM_HandleTypeDef* sample_timer,
+					 IT_BUF_DATA_TYPE* buf_ptr,
+					 uint32_t buf_size)
         : PwmController(timer, channels, std::move(generator))
         , sample_timer_(sample_timer)
         , buf_ptr_(buf_ptr)
@@ -419,11 +419,11 @@ class DMA_PwmController : public PwmController {
 };
 
 inline DMA_PwmController::DMA_PwmController(TIM_HandleTypeDef* timer,
-																					 tdPwmChannels channels,
-																					 pwm_gen::PwmGenerator generator,
-																					 BufferModeTypeDef buf_mode,
-																					 BUF_DATA_TYPE* buf_ptr,
-																					 uint32_t buf_size)
+                                            tdPwmChannels channels,
+                                            pwm_gen::PwmGenerator generator,
+                                            BufferModeTypeDef buf_mode,
+                                            BUF_DATA_TYPE* buf_ptr,
+                                            uint32_t buf_size)
 			: PwmController(timer, channels, std::move(generator))
 			, buf_mode_(buf_mode)
 			, buf_ptr_(buf_ptr)

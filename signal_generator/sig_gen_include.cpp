@@ -47,3 +47,7 @@ SIG_GEN_StatusTypeDef SIG_GEN_SetFreqModSens(SIG_GEN_HandleTypeDef* sg_handle, u
 void SIG_GEN_Run(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().Run(sg_handle);
 }
+
+SIG_GEN_StatusTypeDef SIG_GEN_SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value) {
+  return SignalGenerator::GetInstance().SetSignal(sg_handle, signal, param, value);
+}

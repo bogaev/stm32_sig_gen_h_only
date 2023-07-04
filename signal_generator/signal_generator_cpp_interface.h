@@ -45,6 +45,7 @@ class SignalGenerator {
   SIG_GEN_StatusTypeDef SetAmpModDepth(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
   // установка коэффициента чувствительности частотной модуляции
   SIG_GEN_StatusTypeDef SetFreqModSens(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
+  SIG_GEN_StatusTypeDef SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value);
   void Run(SIG_GEN_HandleTypeDef* sg_handle); // TODO move to inner methods
   
  private:
@@ -139,9 +140,9 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
   }
   
   pwm_gen::PwmGenerator pwm_gen_(std::move(sig_mod),
-															  duty_cycle_settings,
-															  stabilizer_settings,
-															  sg_handle->dead_time_th_percent);
+				 duty_cycle_settings,
+				 stabilizer_settings,
+				 sg_handle->dead_time_th_percent);
   
   if (sg_handle->pwm_mode == SIG_GEN_IT_MODE) {
     int next_buf_shift = it_gen_count_ * IT_BUF_SIZE;
@@ -230,6 +231,14 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::SetFreqModSens(SIG_GEN_HandleTypeD
     return SIG_GEN_ERROR_PWM_NOT_INITED;
   }
   pwms_.at(sg_handle)->SetSignal(SIG_GEN_FREQ_MOD, SIG_GEN_PARAM_FREQ_DEPTH, percent);
+  return SIG_GEN_OK;
+}
+
+inline SIG_GEN_StatusTypeDef SignalGenerator::SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value) {
+  if (!pwms_.count(sg_handle)) {
+    return SIG_GEN_ERROR_PWM_NOT_INITED;
+  }
+  pwms_.at(sg_handle)->SetSignal(signal, param, value);
   return SIG_GEN_OK;
 }
 

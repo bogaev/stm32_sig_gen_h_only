@@ -153,8 +153,7 @@ inline Signal::Signal(uint32_t sample_timer_period)
 inline void Signal::SetParam(uint8_t param, FP_TYPE value) {
   if (param == (uint8_t)SIG_GEN_PARAM_AMP) {
     SetAmp(value);
-  }
-  if (param == (uint8_t)SIG_GEN_PARAM_FREQ) {
+  } else if (param == (uint8_t)SIG_GEN_PARAM_FREQ) {
     SetFreq(value);
   }
 }

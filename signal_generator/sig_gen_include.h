@@ -34,6 +34,7 @@ SIG_GEN_StatusTypeDef SIG_GEN_SetCarrierAmp(SIG_GEN_HandleTypeDef* sg_handle, FP
 SIG_GEN_StatusTypeDef SIG_GEN_SetFreq(SIG_GEN_HandleTypeDef* sg_handle, enSignals signal, FP_TYPE value);
 SIG_GEN_StatusTypeDef SIG_GEN_SetAmpModDepth(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
 SIG_GEN_StatusTypeDef SIG_GEN_SetFreqModSens(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
+SIG_GEN_StatusTypeDef SIG_GEN_SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value);
 void SIG_GEN_Run(SIG_GEN_HandleTypeDef* sg_handle);
 
 #ifdef __cplusplus

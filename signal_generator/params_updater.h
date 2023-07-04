@@ -15,7 +15,6 @@
 
 #include <initializer_list>
 
-
 namespace miostim {
 
 class SignalUpdater : public _pattern::Publisher<tdSignalParams> {
