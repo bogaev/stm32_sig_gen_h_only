@@ -21,12 +21,12 @@ class SignalGenerator {
   SignalGenerator& operator=(const SignalGenerator&) = delete;
   SignalGenerator(SignalGenerator&&) = delete;
   SignalGenerator& operator=(SignalGenerator&&) = delete;
-  
+
   static SignalGenerator& GetInstance() {
     static SignalGenerator sig_gen;
     return sig_gen;
   }
-  
+
   // добавление нового генератора
   SIG_GEN_StatusTypeDef AddPwm(SIG_GEN_HandleTypeDef* sg_handle);
   SIG_GEN_StatusTypeDef Start(SIG_GEN_HandleTypeDef* sg_handle);
@@ -47,15 +47,15 @@ class SignalGenerator {
   SIG_GEN_StatusTypeDef SetFreqModSens(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
   SIG_GEN_StatusTypeDef SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value);
   void Run(SIG_GEN_HandleTypeDef* sg_handle); // TODO move to inner methods
-  
+
  private:
   SignalGenerator() = default;
-  
+
   SIG_GEN_StatusTypeDef CheckCorrStruct(SIG_GEN_RangeCoeff* array, uint32_t size);
-  
+
   inline static BUF_DATA_TYPE dma_data_buf[DMA_GEN_TOTAL_NUM * DMA_BUF_SIZE] = {0};  // буфер данных DMA
   inline static IT_BUF_DATA_TYPE it_data_buf[DMA_GEN_TOTAL_NUM * IT_BUF_SIZE] = {0}; // буфер данных IT
-  
+
   std::unordered_map<SIG_GEN_HandleTypeDef*, PwmController*> pwms_;
   uint8_t it_gen_count_ = 0;
   uint8_t dma_gen_count_ = 0;
@@ -65,7 +65,7 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(SIG_GEN_RangeCoeff
   if (array[0].from != 0) {
     return SIG_GEN_ERROR_INCORRECT_BOUNDS;
   }
-  
+
   for (uint32_t i = 0; i < size-1; ++i) {
     FP_TYPE cur_end = array[i].to;
     FP_TYPE next_start = array[i+1].from;
@@ -73,26 +73,26 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(SIG_GEN_RangeCoeff
       return SIG_GEN_ERROR_INCORRECT_BOUNDS;
     }
   }
-  
+
   return SIG_GEN_OK;
 }
 
-inline SIG_GEN_StatusTypeDef SignalGenerator::Start(SIG_GEN_HandleTypeDef* sg_handle) {   
+inline SIG_GEN_StatusTypeDef SignalGenerator::Start(SIG_GEN_HandleTypeDef* sg_handle) {
   pwms_.at(sg_handle)->Start();
   return SIG_GEN_OK;
 }
 
-inline SIG_GEN_StatusTypeDef SignalGenerator::Stop(SIG_GEN_HandleTypeDef* sg_handle) {   
+inline SIG_GEN_StatusTypeDef SignalGenerator::Stop(SIG_GEN_HandleTypeDef* sg_handle) {
   pwms_.at(sg_handle)->Stop();
   return SIG_GEN_OK;
 }
 
-inline SIG_GEN_StatusTypeDef SignalGenerator::Resume(SIG_GEN_HandleTypeDef* sg_handle) {   
+inline SIG_GEN_StatusTypeDef SignalGenerator::Resume(SIG_GEN_HandleTypeDef* sg_handle) {
   pwms_.at(sg_handle)->Resume();
   return SIG_GEN_OK;
 }
 
-inline SIG_GEN_StatusTypeDef SignalGenerator::Pause(SIG_GEN_HandleTypeDef* sg_handle) {   
+inline SIG_GEN_StatusTypeDef SignalGenerator::Pause(SIG_GEN_HandleTypeDef* sg_handle) {
   pwms_.at(sg_handle)->Pause();
   return SIG_GEN_OK;
 }
@@ -101,25 +101,25 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
   if (pwms_.count(sg_handle)) {
     SIG_GEN_Deinit(sg_handle);
   }
-  
+
   if (sg_handle->pwm_timer == 0) {
     return SIG_GEN_ERROR_PWM_TIMER_NOT_SET;
   }
-  
-  //  FP_TYPE sample_rate = 
+
+  //  FP_TYPE sample_rate =
   //    sg_handle->coeffs ?
   //      sg_handle->coeffs->freq_array[sg_handle->coeffs->freq_array_size-1].to * 2.
   //        : 1000.;
-  
+
   FP_TYPE sample_rate = SAMPLE_RATE;
-  
+
   SignalModulator sig_mod((uint32_t)sample_rate);
-  
+
   pwm_gen::PwmGenerator::Settings duty_cycle_settings;
   duty_cycle_settings.min_percent = (FP_TYPE)sg_handle->min_duty_cycle_percent;
   duty_cycle_settings.max_percent = (FP_TYPE)sg_handle->max_duty_cycle_percent;
   duty_cycle_settings.timer_period = (FP_TYPE)sg_handle->pwm_timer->Init.Period;
-  
+
   pwm_gen::SignalStabilizer::Settings stabilizer_settings = {0};
   if (sg_handle->coeffs != 0) {
     {
@@ -138,12 +138,12 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
     }
     stabilizer_settings.coeffs = sg_handle->coeffs;
   }
-  
+
   pwm_gen::PwmGenerator pwm_gen_(std::move(sig_mod),
 				 duty_cycle_settings,
 				 stabilizer_settings,
 				 sg_handle->dead_time_th_percent);
-  
+
   if (sg_handle->pwm_mode == SIG_GEN_IT_MODE) {
     int next_buf_shift = it_gen_count_ * IT_BUF_SIZE;
     pwms_[sg_handle] = new IT_PwmController(sg_handle->pwm_timer,
@@ -166,13 +166,13 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
                                              DMA_BUF_SIZE);
     ++dma_gen_count_;
   }
-  
+
 //  pwms_[sg_handle]->Start();
-  
+
   return SIG_GEN_OK;
 }
 
-inline SIG_GEN_StatusTypeDef SignalGenerator::DeletePwm(SIG_GEN_HandleTypeDef* sg_handle) {   
+inline SIG_GEN_StatusTypeDef SignalGenerator::DeletePwm(SIG_GEN_HandleTypeDef* sg_handle) {
   pwms_.at(sg_handle)->~PwmController();
   pwms_.erase(sg_handle);
   return SIG_GEN_OK;
@@ -190,27 +190,27 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::SetCarrierAmp(SIG_GEN_HandleTypeDe
   if (!pwms_.count(sg_handle)) {
     return SIG_GEN_ERROR_PWM_NOT_INITED;
   }
-	
+
   if (value > sg_handle->coeffs->amp_array[sg_handle->coeffs->amp_array_size-1].to) {
     return SIG_GEN_ERROR_AMPLITUDE_VALUE_ABOVE_MAX;
   }
-	
+
   pwms_.at(sg_handle)->SetSignal(SIG_GEN_CARRIER, SIG_GEN_PARAM_AMP, value);
   return SIG_GEN_OK;
 }
 
 inline SIG_GEN_StatusTypeDef SignalGenerator::SetFreq(SIG_GEN_HandleTypeDef* sg_handle, enSignals signal, FP_TYPE value) {
-//  FP_TYPE sample_rate = 
-//    sg_handle->coeffs ? 
+//  FP_TYPE sample_rate =
+//    sg_handle->coeffs ?
 //      sg_handle->coeffs->freq_array[sg_handle->coeffs->freq_array_size-1].to * 2.
 //        : 1000.;
-	
+
   FP_TYPE sample_rate = SAMPLE_RATE;
-        
-  if (value >= sample_rate / 2.) {
+
+  if (value >= sample_rate / 2.0f) {
     return SIG_GEN_ERROR_SAMPLE_RATE_LESS_THAN_FREQ;
   }
-	
+
   if (!pwms_.count(sg_handle)) {
     return SIG_GEN_ERROR_PWM_NOT_INITED;
   }

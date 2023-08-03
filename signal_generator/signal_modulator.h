@@ -5,7 +5,7 @@
   * @brief   Файл определяет класс - композицию из 3 сигналов
   *          для вычисления результирующего модулированного сигнала
   ******************************************************************************
-  */ 
+  */
 
 #ifndef _SIGNAL_MODULATOR_H_
 #define _SIGNAL_MODULATOR_H_
@@ -28,19 +28,19 @@ namespace pwm_gen {
 /**
   * @brief  Вычисление значения модулированного сигнала
   */
-class SignalModulator : public _pattern::Observer<tdSignalParams> {  
+class SignalModulator : public _pattern::Observer<tdSignalParams> {
  public:
   friend class pwm_gen::PwmGenerator;
-  
+
   SignalModulator(uint32_t sample_rate);
-  
+
   explicit SignalModulator(uint32_t sample_rate,
                            enSignalTypes carrier,
                            enSignalTypes amod = SIG_GEN_TYPE_NONE,
                            enSignalTypes fmod = SIG_GEN_TYPE_NONE);
   SignalModulator(SignalModulator&& other) = default;
   virtual ~SignalModulator();
-  
+
   FP_TYPE GetValue();
   FP_TYPE GetAmp() const;
   FP_TYPE GetFreq(enSignals signal = SIG_GEN_CARRIER) const;
@@ -48,25 +48,25 @@ class SignalModulator : public _pattern::Observer<tdSignalParams> {
   enSignalTypes GetCarrierType() const;
   void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value);
   void Update(tdSignalParams msg) override;
-  
+
  private:
   SignalModulator& GenerateCarrier();
   SignalModulator& AddAmpMod();
   SignalModulator& GenerateFreqMod();
   void Reset();
   uint32_t GetSampleNum() const;
-  
+
   const uint32_t sample_rate_; /// частота семплирования сигнала
   std::unique_ptr<Signal> carrier_; /// сигнал с параметрами несущего сигнала
   std::unique_ptr<Signal> amod_; /// сигнал с параметрами частотной модуляции
   std::unique_ptr<Signal> fmod_; /// сигнал с параметрами частотной модуляции
 //  uint32_t amp_mod_period_;
   uint8_t amod_depth_percent_ = 100;
-  FP_TYPE mod_sig_value_ = 0.0;
+  FP_TYPE mod_sig_value_ = 0.0f;
   uint32_t sample_ = 0; // номер текущего семпла (точки) для которого вычислется значение
 };
 
-inline SignalModulator::SignalModulator(uint32_t sample_rate) 
+inline SignalModulator::SignalModulator(uint32_t sample_rate)
   : sample_rate_(sample_rate)
 //  , carrier_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_SINUS)) //!!
   , carrier_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
@@ -99,7 +99,7 @@ inline void SignalModulator::Update(tdSignalParams msg) {
 }
 
 /**
-  * @brief  Вычисляет отдельное значение результирующего 
+  * @brief  Вычисляет отдельное значение результирующего
   *         модулированного сигнала
   * @retval Значение сигнала в точке sample_
   */
@@ -117,7 +117,7 @@ inline FP_TYPE SignalModulator::GetValue() {
 //    cycles_num = GetCyclesCounter();
 //    StopCyclesCounter();
   } else {
-    mod_sig_value_ = 0.0; // если не задано никакого сигнала - выводится 0
+    mod_sig_value_ = 0.0f; // если не задано никакого сигнала - выводится 0
   }
   ++sample_;
 //  if (sample_ > 0 && (sample_ % amp_mod_period_) < uint32_t(amp_mod_period_ * 0.01)) {
@@ -141,8 +141,8 @@ inline SignalModulator& SignalModulator::GenerateCarrier() {
 inline SignalModulator& SignalModulator::AddAmpMod()
 {
   mod_sig_value_ *= (std::abs(amod_->GetValue(sample_))
-            * ((FP_TYPE)amod_depth_percent_ / 100.0)
-                + (1.0 - (FP_TYPE)amod_depth_percent_ / 100.0));
+            * ((FP_TYPE)amod_depth_percent_ / 100.0f)
+                + (1.0f - (FP_TYPE)amod_depth_percent_ / 100.0f));
   return *this;
 }
 
@@ -182,11 +182,11 @@ inline FP_TYPE SignalModulator::GetFreq(enSignals signal) const
   } else if (signal == SIG_GEN_FREQ_MOD) {
     return fmod_->GetFreq();
   }
-  return 0.0;
+  return 0.0f;
 }
 
 inline FP_TYPE SignalModulator::GetPeriod(enSignals signal) const {
-  return 1.0 / GetFreq(signal);
+  return 1.0f / GetFreq(signal);
 }
 
 inline enSignalTypes SignalModulator::GetCarrierType() const {
@@ -252,7 +252,7 @@ inline void SignalModulator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE va
 inline void SignalModulator::Reset()
 {
   sample_ = 0;
-  mod_sig_value_ = 0.0;
+  mod_sig_value_ = 0.0f;
 }
 
 #endif // #ifndef _SIGNAL_MODULATOR_H_
