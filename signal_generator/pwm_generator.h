@@ -158,8 +158,8 @@ inline void PwmGenerator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value
 inline uint32_t PwmGenerator::GetValue() {
   pwm_value_ = sig_mod_.GetValue();
 
-  if (	 (pwm_value_ >= 0.0f && is_neg_halfwave_)
-			|| (pwm_value_ <= 0.0f && !is_neg_halfwave_)) {
+  if (     (pwm_value_ >= 0.0f && is_neg_halfwave_)
+        || (pwm_value_ <= 0.0f && !is_neg_halfwave_)) {
 //    while (!buffer_params_.empty()) {
 //      CommitChanges(sig_mod_);
 //    }

@@ -22,10 +22,7 @@ class SignalGenerator {
   SignalGenerator(SignalGenerator&&) = delete;
   SignalGenerator& operator=(SignalGenerator&&) = delete;
 
-  static SignalGenerator& GetInstance() {
-    static SignalGenerator sig_gen;
-    return sig_gen;
-  }
+  static SignalGenerator& GetInstance();
 
   // добавление нового генератора
   SIG_GEN_StatusTypeDef AddPwm(SIG_GEN_HandleTypeDef* sg_handle);
@@ -53,13 +50,22 @@ class SignalGenerator {
 
   SIG_GEN_StatusTypeDef CheckCorrStruct(SIG_GEN_RangeCoeff* array, uint32_t size);
 
+#if DMA_GEN_TOTAL_NUM > 0 && DMA_BUF_SIZE > 0
   inline static BUF_DATA_TYPE dma_data_buf[DMA_GEN_TOTAL_NUM * DMA_BUF_SIZE] = {0};  // буфер данных DMA
-  inline static IT_BUF_DATA_TYPE it_data_buf[DMA_GEN_TOTAL_NUM * IT_BUF_SIZE] = {0}; // буфер данных IT
+#endif
+#if IT_GEN_TOTAL_NUM > 0 && IT_BUF_SIZE > 0
+  inline static IT_BUF_DATA_TYPE it_data_buf[IT_GEN_TOTAL_NUM * IT_BUF_SIZE] = {0}; // буфер данных IT
+#endif
 
   std::unordered_map<SIG_GEN_HandleTypeDef*, PwmController*> pwms_;
   uint8_t it_gen_count_ = 0;
   uint8_t dma_gen_count_ = 0;
 };
+
+inline SignalGenerator& SignalGenerator::GetInstance() {
+  static SignalGenerator sig_gen;
+  return sig_gen;
+}
 
 inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(SIG_GEN_RangeCoeff* array, uint32_t size) {
   if (array[0].from != 0) {
@@ -154,18 +160,21 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
                                             it_data_buf + next_buf_shift,
                                             IT_BUF_SIZE);
     ++it_gen_count_;
-  } else if (sg_handle->pwm_mode == SIG_GEN_DMA_MODE) {
+  }
+#if DMA_GEN_TOTAL_NUM > 0 && DMA_BUF_SIZE > 0
+  else if (sg_handle->pwm_mode == SIG_GEN_DMA_MODE) {
     int next_buf_shift = dma_gen_count_ * DMA_BUF_SIZE;
     pwms_[sg_handle] = new DMA_PwmController(sg_handle->pwm_timer,
                                             {sg_handle->channels[0],
                                              sg_handle->channels[1]},
                                              std::move(pwm_gen_),
-																						 BUF_MODE_SINGLE,
-//																						 BUF_MODE_DOUBLE,
+                                             BUF_MODE_SINGLE,
+                                     //      BUF_MODE_DOUBLE,
                                              dma_data_buf + next_buf_shift,
                                              DMA_BUF_SIZE);
     ++dma_gen_count_;
   }
+#endif
 
 //  pwms_[sg_handle]->Start();
 
