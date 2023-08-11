@@ -2,7 +2,6 @@
 #define _VALUE_CONVERTERS_H_
 
 #include "tim.h"
-#include "tim.h"
 
 //#include "Common\components.hpp"
 
@@ -15,12 +14,12 @@ inline uint32_t PercentsToTimerValue(TIM_HandleTypeDef* timer, int8_t value) {
 }
 
 template<typename Cont>
-std::array<float, ENCODERS_NUM> GetBalanceCoefficients(const Cont& v) {
-  std::array<float, ENCODERS_NUM> ret;
-  
+std::array<float, 3> GetBalanceCoefficients(const Cont& v) {
+  std::array<float, 3> ret;
+
   for(int i = 0; i < v.size(); ++i)
     ret[i] = float(v[0]) / float(v[i]);
-    
+
   return ret;
 }
 

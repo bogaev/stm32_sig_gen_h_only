@@ -1,10 +1,10 @@
 #include "signal_generator_cpp_interface.h"
 
-SIG_GEN_StatusTypeDef SIG_GEN_Init(SIG_GEN_HandleTypeDef* sg_handle) {   
+SIG_GEN_StatusTypeDef SIG_GEN_Init(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().AddPwm(sg_handle);
 }
 
-SIG_GEN_StatusTypeDef SIG_GEN_Start(SIG_GEN_HandleTypeDef* sg_handle) {   
+SIG_GEN_StatusTypeDef SIG_GEN_Start(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().Start(sg_handle);
 }
 
@@ -12,7 +12,7 @@ SIG_GEN_StatusTypeDef SIG_GEN_Stop(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().Stop(sg_handle);
 }
 
-SIG_GEN_StatusTypeDef SIG_GEN_Resume(SIG_GEN_HandleTypeDef* sg_handle) {   
+SIG_GEN_StatusTypeDef SIG_GEN_Resume(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().Resume(sg_handle);
 }
 
@@ -20,7 +20,7 @@ SIG_GEN_StatusTypeDef SIG_GEN_Pause(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().Pause(sg_handle);
 }
 
-SIG_GEN_StatusTypeDef SIG_GEN_Deinit(SIG_GEN_HandleTypeDef* sg_handle) {   
+SIG_GEN_StatusTypeDef SIG_GEN_Deinit(SIG_GEN_HandleTypeDef* sg_handle) {
   return SignalGenerator::GetInstance().DeletePwm(sg_handle);
 }
 
@@ -50,4 +50,8 @@ void SIG_GEN_Run(SIG_GEN_HandleTypeDef* sg_handle) {
 
 SIG_GEN_StatusTypeDef SIG_GEN_SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value) {
   return SignalGenerator::GetInstance().SetSignal(sg_handle, signal, param, value);
+}
+
+SIG_GEN_StatusTypeDef SIG_GEN_CommitChanges(SIG_GEN_HandleTypeDef* sg_handle) {
+  return SignalGenerator::GetInstance().CommitChanges(sg_handle);
 }

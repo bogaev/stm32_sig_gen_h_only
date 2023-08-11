@@ -58,6 +58,7 @@ class PwmController : public _pattern::Observer<tdUartData> {
   virtual void Run() = 0;
   virtual void ISR_Handler() = 0;
   virtual void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value);
+  virtual void CommitChanges() {};
   virtual bool IsPaused() const { return false; }
 
  protected:
@@ -67,12 +68,13 @@ class PwmController : public _pattern::Observer<tdUartData> {
   static std::vector<PwmController*> GetTimerInstance(TIM_HandleTypeDef* htim);
   static HAL_TIM_ActiveChannel GetActiveChannel(uint32_t tim_ch);
   void Update(tdUartData msg) override;
+  void CheckChannelStatus(uint8_t signal, uint8_t param, FP_TYPE value);
 
   inline static std::vector<std::vector<PwmController*>> htim_to_inst{10}; /// таблица хендлер таймера -> экземпляр класса
   TIM_HandleTypeDef* timer_ = nullptr; /// таймер ШИМ STM32
   tdPwmChannels channels_; /// каналы таймера ШИМ STM32
   pwm_gen::PwmGenerator generator_; /// генератор значений ШИМ
-  bool is_active_ = false; /// текущий статус генерации сигнала
+  bool is_paused_ = true;
 };
 
 inline PwmController::PwmController(TIM_HandleTypeDef* timer,
@@ -97,6 +99,18 @@ inline void PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE valu
   */
 inline void PwmController::Update(tdUartData msg) {
   generator_.SetSignal(msg.signal, msg.param, msg.value);
+}
+
+inline void PwmController::CheckChannelStatus(uint8_t signal, uint8_t param, FP_TYPE value) {
+  if (  signal == SIG_GEN_CARRIER
+      && param == SIG_GEN_PARAM_SIGNAL_TYPE
+      && value == SIG_GEN_TYPE_NONE) {
+            Pause();
+  } else if (  signal == SIG_GEN_CARRIER
+      && param == SIG_GEN_PARAM_SIGNAL_TYPE
+      && value != SIG_GEN_TYPE_NONE) {
+            Resume();
+  }
 }
 
 /**
@@ -216,6 +230,7 @@ class IT_PwmController : public PwmController {
   void Pause() override;
   void Run() override;
   void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) override;
+  void CommitChanges();
   bool IsPaused() const override;
 
  private:
@@ -229,10 +244,9 @@ class IT_PwmController : public PwmController {
   IT_BUF_DATA_TYPE* const buf_ptr_; /// указатель на начало буфера значений сигнала
   const uint32_t buf_size_; /// размер буфера значений сигнала
   uint32_t index_ = 0; /// текущий индекс массива значений сигнала
-  bool is_paused_ = false; /// текущий индекс массива значений сигнала
   osSemaphoreId_t pwm_start_;
   osSemaphoreId_t pwm_transfer_complete_;
-  osSemaphoreId_t calc_upd_buf_sem_;
+  osSemaphoreId_t upd_buf_sem_;
   std::unique_ptr<RTOSTaskWrapper> task_start_; /// обёртка задачи FreeRTOS
   std::unique_ptr<RTOSTaskWrapper> task_buf_upd_; /// обёртка задачи FreeRTOS
 };
@@ -247,13 +261,14 @@ inline IT_PwmController::IT_PwmController(TIM_HandleTypeDef* timer,
         , sample_timer_(sample_timer)
         , buf_ptr_(buf_ptr)
         , buf_size_(buf_size)
-        , pwm_start_(osSemaphoreNew(1U, 1U, NULL))
-        , pwm_transfer_complete_(osSemaphoreNew(1U, 0U, NULL))
-        , calc_upd_buf_sem_(osSemaphoreNew(1U, 0U, NULL)) {
-  task_start_ =
-    std::make_unique<RTOSTaskWrapper>(
-        "start", RTOS_TASK_STACK_SIZE, osPriorityHigh,
-         std::function<void(void*)>(std::bind(&IT_PwmController::TaskPwmStart, this, std::placeholders::_1)));
+//        , pwm_start_(osSemaphoreNew(1U, 1U, NULL))
+//        , pwm_transfer_complete_(osSemaphoreNew(1U, 0U, NULL))
+        , upd_buf_sem_(osSemaphoreNew(1U, 0U, NULL)) {
+  Start();
+//  task_start_ =
+//    std::make_unique<RTOSTaskWrapper>(
+//        "start", RTOS_TASK_STACK_SIZE, osPriorityNormal,
+//         std::function<void(void*)>(std::bind(&IT_PwmController::TaskPwmStart, this, std::placeholders::_1)));
 
   task_buf_upd_ =
     std::make_unique<RTOSTaskWrapper>("buf_upd", RTOS_TASK_STACK_SIZE, osPriorityNormal,
@@ -261,7 +276,8 @@ inline IT_PwmController::IT_PwmController(TIM_HandleTypeDef* timer,
 
   HAL_TIM_RegisterCallback(sample_timer_, HAL_TIM_PERIOD_ELAPSED_CB_ID, TIM_PeriodElapsedCallback);
   BindTimerToInstance(sample_timer_, this);
-  task_start_->Create();
+  UpdateBuffer();
+//  task_start_->Create();
   task_buf_upd_->Create();
 }
 
@@ -272,12 +288,20 @@ inline IT_PwmController::~IT_PwmController() {
 }
 
 inline void IT_PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
+  CheckChannelStatus(signal, param, value);
   PwmController::SetSignal(signal, param, value);
-  osSemaphoreRelease(calc_upd_buf_sem_);
+}
+
+inline void IT_PwmController::CommitChanges() {
+  if (!IsPaused()) {
+    osSemaphoreRelease(upd_buf_sem_);
+  }
 }
 
 inline void IT_PwmController::Start() {
-  HAL_TIM_Base_Start_IT(sample_timer_);
+//  HAL_TIM_Base_Start_IT(sample_timer_);
+  __HAL_TIM_SET_COMPARE(timer_, channels_.pos_halfwave_channel, 0);
+  __HAL_TIM_SET_COMPARE(timer_, channels_.neg_halfwave_channel, 0);
   HAL_TIM_PWM_Start_IT(timer_, channels_.pos_halfwave_channel);
   HAL_TIM_PWM_Start_IT(timer_, channels_.neg_halfwave_channel);
 }
@@ -285,7 +309,7 @@ inline void IT_PwmController::Start() {
 inline void IT_PwmController::Stop() {
   HAL_TIM_PWM_Stop_IT(timer_, channels_.neg_halfwave_channel);
   HAL_TIM_PWM_Stop_IT(timer_, channels_.pos_halfwave_channel);
-  HAL_TIM_Base_Stop_IT(sample_timer_);
+//  HAL_TIM_Base_Stop_IT(sample_timer_);
 }
 
 inline void IT_PwmController::Resume() {
@@ -316,24 +340,26 @@ inline void IT_PwmController::Run() {
   index_ = (index_ >= buf_size_ ? 0 : index_);
 }
 
-inline void IT_PwmController::TaskPwmStart(void *argument) {
-  for (;;) {
-    if (osSemaphoreAcquire( pwm_start_, osWaitForever ) == osOK) {
-      HAL_TIM_Base_Start_IT(sample_timer_);
-      HAL_TIM_PWM_Start_IT(timer_, channels_.pos_halfwave_channel);
-      HAL_TIM_PWM_Start_IT(timer_, channels_.neg_halfwave_channel);
-      osSemaphoreRelease(pwm_transfer_complete_);
-    }
-  }
-}
+//inline void IT_PwmController::TaskPwmStart(void *argument) {
+//  for (;;) {
+//    if (osSemaphoreAcquire( pwm_start_, osWaitForever ) == osOK) {
+//      HAL_TIM_Base_Start_IT(sample_timer_);
+//      HAL_TIM_PWM_Start_IT(timer_, channels_.pos_halfwave_channel);
+//      HAL_TIM_PWM_Start_IT(timer_, channels_.neg_halfwave_channel);
+////      osSemaphoreRelease(pwm_transfer_complete_);
+//    }
+//  }
+//}
 
 /**
   * @brief  Метод, содержащий код задачи FreeRTOS которая обновляет буфер значений
   */
 inline void IT_PwmController::TaskBufUpd(void *argument) {
   for(;;) {
-    if (osSemaphoreAcquire(calc_upd_buf_sem_, osWaitForever) == osOK) {
+    if (osSemaphoreAcquire(upd_buf_sem_, osWaitForever) == osOK) {
+      Pause();
       UpdateBuffer();
+      Resume();
     }
   }
 }
@@ -352,7 +378,6 @@ inline void IT_PwmController::TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 inline void IT_PwmController::UpdateBuffer() {
-//  Pause();
   for (size_t i = 0; i < buf_size_; ++i) {
     if (generator_.IsNegHalfwave()) {
       buf_ptr_[i] = (-1) * (IT_BUF_DATA_TYPE) generator_.GetValue();
@@ -360,7 +385,6 @@ inline void IT_PwmController::UpdateBuffer() {
       buf_ptr_[i] = (IT_BUF_DATA_TYPE) generator_.GetValue();
     }
   }
-//  Resume();
 }
 
 // class DMA_PwmController ============================================================
@@ -408,7 +432,7 @@ class DMA_PwmController : public PwmController {
   BUF_DATA_TYPE* neg_ch_; /// буфер сигнала для отрицательной полуволны
 
   osSemaphoreId_t calc_frame_sem_;
-  osSemaphoreId_t calc_upd_buf_sem_;
+  osSemaphoreId_t upd_buf_sem_;
   osSemaphoreId_t calc_buf_ready_sem_;
   osSemaphoreId_t pwm_start_;
 
@@ -432,7 +456,7 @@ inline DMA_PwmController::DMA_PwmController(TIM_HandleTypeDef* timer,
 			, pos_ch_(buf_ptr_)
 			, neg_ch_(pos_ch_ + ch_buf_size_)
 			, calc_frame_sem_(osSemaphoreNew(1, 0U, NULL))
-			, calc_upd_buf_sem_(osSemaphoreNew(1, 0U, NULL))
+			, upd_buf_sem_(osSemaphoreNew(1, 0U, NULL))
 			, calc_buf_ready_sem_(osSemaphoreNew(1, 0U, NULL))
 			, pwm_start_(osSemaphoreNew(1, 0U, NULL)) {
 //  assert(buf_ptr_);
@@ -440,7 +464,7 @@ inline DMA_PwmController::DMA_PwmController(TIM_HandleTypeDef* timer,
 //  assert(ch_buf_size_);
 //  assert(pos_ch_);
 //  assert(neg_ch_);
-//  assert(calc_upd_buf_sem_);
+//  assert(upd_buf_sem_);
 //  assert(calc_buf_ready_sem_);
 //  assert(pwm_start_);
 
@@ -473,7 +497,7 @@ inline DMA_PwmController::~DMA_PwmController() {
 inline void DMA_PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
   PwmController::SetSignal(signal, param, value);
   if (buf_mode_ == BUF_MODE_SINGLE) {
-    osSemaphoreRelease(calc_upd_buf_sem_);
+    osSemaphoreRelease(upd_buf_sem_);
   }
 }
 
@@ -483,7 +507,7 @@ inline void DMA_PwmController::UpdateBufferSize(size_t new_size) {
 }
 
 inline void DMA_PwmController::StartBufferUpdate() {
-  osSemaphoreRelease(calc_upd_buf_sem_);
+  osSemaphoreRelease(upd_buf_sem_);
 }
 
 inline void DMA_PwmController::Start() {
@@ -521,7 +545,7 @@ inline void DMA_PwmController::TaskDmaStart(void *argument) {
   */
 inline void DMA_PwmController::TaskBufUpd(void *argument) {
   for(;;) {
-    if (osSemaphoreAcquire(calc_upd_buf_sem_, osWaitForever) == osOK) {
+    if (osSemaphoreAcquire(upd_buf_sem_, osWaitForever) == osOK) {
       if (buf_mode_ == BUF_MODE_DOUBLE) {
         SwitchFrame();
         UpdateFrame(ch_buf_size_ / 2);
@@ -543,7 +567,7 @@ inline void DMA_PwmController::ISR_Handler() {
   if (timer_->Channel == GetActiveChannel(channels_.pos_halfwave_channel)) {
 //    SwitchFrame();
 //    UpdateFrame(ch_buf_size_/2);
-    osSemaphoreRelease(calc_upd_buf_sem_);
+    osSemaphoreRelease(upd_buf_sem_);
   }
 }
 

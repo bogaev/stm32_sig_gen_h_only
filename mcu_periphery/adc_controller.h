@@ -2,8 +2,8 @@
 #define _ADC_CONTROLLER_H_
 
 #include "adc.h"
-#include "utility\interrupt_manager.hpp"
-#include "utility\callback.hpp"
+#include "app/interrupt_manager.h"
+#include "utility/callback.h"
 
 #include <vector>
 #include <numeric>
@@ -18,27 +18,27 @@ struct InitSettings {
 };
 
 // ADC BaseController class =============================================
-  
+
 class BaseController : public InterruptListener<ADC_HandleTypeDef*> {
 public:
   BaseController(InitSettings settings)
     : hadc_(settings.hadc) {
-      
+
     adc_interrupt_manager.SetListener(this);
   }
-  
+
   virtual ~BaseController() {
     Stop();
   }
-  
+
   virtual void Start() = 0;
-  
+
   void Stop() {
     HAL_ADC_Stop(hadc_);
     HAL_ADC_Stop_IT(hadc_);
     HAL_ADC_Stop_DMA(hadc_);
   }
-  
+
   template<typename T>
   void SetAdcConversationEndHandler(T* owner, void (T::*func_ptr)());
   bool ISR_Handler(ADC_HandleTypeDef* hadc) override {
@@ -65,11 +65,11 @@ void BaseController::SetAdcConversationEndHandler(T* owner, void (T::*func_ptr)(
 class IT_Controller : public BaseController {
 public:
   using BaseController::hadc_;
-  
+
   IT_Controller(InitSettings settings) :
     BaseController(settings)
   {}
-  
+
   void Start() override {
     HAL_ADC_Start_IT(hadc_);
   }
@@ -84,7 +84,7 @@ public:
 class DMAController : public BaseController {
 public:
   using BaseController::hadc_;
-  
+
   DMAController(InitSettings settings)
     : BaseController(settings),
     buffer_(settings.buffer_size, 0) {
@@ -95,7 +95,7 @@ public:
   }
 
   uint16_t GetValue() {
-    return (uint16_t)((double)std::accumulate(buffer_.cbegin(), buffer_.cend(), 0) 
+    return (uint16_t)((double)std::accumulate(buffer_.cbegin(), buffer_.cend(), 0)
             / (double)buffer_.size());
   }
 

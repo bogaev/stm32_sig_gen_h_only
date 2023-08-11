@@ -1,13 +1,13 @@
 #ifndef _SOFTWARE_PWM_H_
 #define _SOFTWARE_PWM_H_
 
-#include "utility\timer_facility.hpp"
-#include "utility\callback.hpp"
+#include "utility/timer_facility.h"
+#include "utility/callback.h"
 
 #include <memory>
 
 namespace util {
-  
+
 struct FreqInitSettings {
   float freq;
   float duty_cycle;
@@ -25,7 +25,7 @@ public:
   using HW_Timer = tim::HW_STM32_BaseTimer;
   enum enPeriod { LOW = 0, HIGH };
   enum TimType { OS, HW };
-  
+
   SoftwarePWM(TimType type, FreqInitSettings settings);
   SoftwarePWM(TimType type, PeriodsInitSettings settings);
   void Start();
@@ -34,11 +34,11 @@ public:
   void SetPeriods(uint16_t high_period, uint16_t low_period);
   template<typename T>
   void SetPwmPeriodChangeHandler(T* owner, void (T::*func_ptr)(enPeriod));
- 
+
 private:
   void InitTimer(TimType type);
   void ExpireTimerHandler();
-  
+
   FreqInitSettings settings_;
   std::unique_ptr<_util::GenericCallback<enPeriod>> period_change_callback_;
   std::unique_ptr<ITimer> timer_;

@@ -1,4 +1,4 @@
-#include "flash.hpp"
+#include "mcu_periphery/flash/flash.h"
 #include "eeprom.h"
 
 std::vector<uint16_t> VirtAddVarTab;
@@ -7,7 +7,7 @@ namespace flash {
 
 Controller::Controller(std::vector<SerializedClass*> serialized_classes)
   : serialized_classes_(serialized_classes) {
-    
+
 //  InitSerializedClasses();
   HAL_FLASH_Unlock();
   if(EE_Init() != EE_OK) {
@@ -18,7 +18,7 @@ Controller::Controller(std::vector<SerializedClass*> serialized_classes)
 void Controller::Init() {
   uint16_t vaddr = 1;
   std::vector<uint16_t> ret;
-  
+
   for (SerializedClass* cls : serialized_classes_) {
     cls->RegisterController(this);
     auto& data = cls->GetSerializedData();
@@ -33,7 +33,7 @@ void Controller::AddClass(SerializedClass* cls) {
   serialized_classes_.emplace_back(cls);
 }
 
-HAL_StatusTypeDef Controller::StoreToFlash(SerializedClass::StoredData& data) { 
+HAL_StatusTypeDef Controller::StoreToFlash(SerializedClass::StoredData& data) {
   if((EE_WriteVariable(data.vaddr, data.value)) != HAL_OK) {
     return HAL_ERROR;
   }

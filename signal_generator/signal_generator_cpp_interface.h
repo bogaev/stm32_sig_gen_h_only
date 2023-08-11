@@ -43,6 +43,7 @@ class SignalGenerator {
   // установка коэффициента чувствительности частотной модуляции
   SIG_GEN_StatusTypeDef SetFreqModSens(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
   SIG_GEN_StatusTypeDef SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value);
+  SIG_GEN_StatusTypeDef CommitChanges(SIG_GEN_HandleTypeDef* sg_handle);
   void Run(SIG_GEN_HandleTypeDef* sg_handle); // TODO move to inner methods
 
  private:
@@ -248,6 +249,14 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::SetSignal(SIG_GEN_HandleTypeDef* s
     return SIG_GEN_ERROR_PWM_NOT_INITED;
   }
   pwms_.at(sg_handle)->SetSignal(signal, param, value);
+  return SIG_GEN_OK;
+}
+
+inline SIG_GEN_StatusTypeDef SignalGenerator::CommitChanges(SIG_GEN_HandleTypeDef* sg_handle) {
+  if (!pwms_.count(sg_handle)) {
+    return SIG_GEN_ERROR_PWM_NOT_INITED;
+  }
+  pwms_.at(sg_handle)->CommitChanges();
   return SIG_GEN_OK;
 }
 

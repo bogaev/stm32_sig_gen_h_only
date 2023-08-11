@@ -14,10 +14,12 @@
 #include <cassert>
 #include <memory>
 
+#define pdTICKS_TO_MS( xTicks ) ( ( uint32_t ) ( ( ( uint32_t ) ( xTicks ) * ( uint32_t ) 1000 ) / ( uint32_t ) configTICK_RATE_HZ ) )
+
 namespace tim {
 
 // TimerInterface class =============================================
-  
+
 class TimerInterface {
  public:
   TimerInterface(TimerPeriod period_ms);
@@ -44,12 +46,12 @@ inline TimerInterface::TimerInterface(TimerPeriod period_ms) :
 {}
 
 // Software OS Timer class =============================================
-  
+
 class SW_FreeRTOS_Timer : public TimerInterface, public InterruptListener<TimerHandle_t> {
- public:  
+ public:
   using TimerInterface::period_ms_;
   using TimerInterface::expire_callback_;
-  
+
   SW_FreeRTOS_Timer(void* owner,
                     TimerPeriod period_ms,
                     enAutoreload auto_reload);
@@ -58,12 +60,14 @@ class SW_FreeRTOS_Timer : public TimerInterface, public InterruptListener<TimerH
   void Stop() override;
   void Reset() override;
   void ChangePeriod(TimerPeriod period_ms) override;
+  size_t GetTimeMS();
+  uint32_t GetExpiryTimeMS();
   TimerHandle_t GetHandler();
   bool ISR_Handler(TimerHandle_t timer) override;
-  
+
  private:
   void InitFreeRTOS_Timer();
-  
+
   void* owner_;
   TimerHandle_t tim_handle_;
   enAutoreload auto_reload_;
@@ -99,6 +103,20 @@ inline void SW_FreeRTOS_Timer::Reset() {
 inline void SW_FreeRTOS_Timer::ChangePeriod(TimerPeriod period_ms) {
   period_ms_ = period_ms;
   xTimerChangePeriod(tim_handle_, pdMS_TO_TICKS(period_ms_), osWaitForever);
+}
+
+inline size_t SW_FreeRTOS_Timer::GetTimeMS() {
+  return (size_t) period_ms_;
+}
+
+inline uint32_t SW_FreeRTOS_Timer::GetExpiryTimeMS() {
+  TickType_t ticks;
+  if (xTimerIsTimerActive(tim_handle_) == pdFALSE) {
+    ticks = xTimerGetPeriod(tim_handle_);
+  } else {
+    ticks = xTimerGetExpiryTime(tim_handle_) - xTaskGetTickCount();
+  }
+  return pdTICKS_TO_MS(ticks);
 }
 
 inline TimerHandle_t SW_FreeRTOS_Timer::GetHandler() {
@@ -142,12 +160,12 @@ inline bool SW_FreeRTOS_Timer::ISR_Handler(TimerHandle_t timer) {
 }
 
 // Hardware STM32 Timer class =============================================
-  
+
 class HW_STM32_BaseTimer : public TimerInterface, public InterruptListener<TIM_HandleTypeDef*> {
  public:
 	using TimerInterface::period_ms_;
   using TimerInterface::expire_callback_;
-  
+
   HW_STM32_BaseTimer(TIM_HandleTypeDef* hal_handler,
                      TimerPeriod period_ms);
   ~HW_STM32_BaseTimer();
@@ -157,8 +175,8 @@ class HW_STM32_BaseTimer : public TimerInterface, public InterruptListener<TIM_H
   void ChangePeriod(TimerPeriod period_ms) override;
   TIM_HandleTypeDef* GetHandler();
   bool ISR_Handler(TIM_HandleTypeDef* timer) override;
-  
- private:  
+
+ private:
   TIM_HandleTypeDef* hal_handler_;
   int id_ = 0;
   size_t counter_;
