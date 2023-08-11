@@ -189,17 +189,13 @@ inline FP_TYPE Signal::GetModDepth() const {
 inline std::unique_ptr<Signal> Signal::Create(enSignalTypes sig_type) {
   if (sig_type == SIG_GEN_TYPE_NONE) {
     return nullptr;
-  }
-	else if (sig_type == SIG_GEN_TYPE_SINUS) {
+  } else if (sig_type == SIG_GEN_TYPE_SINUS) {
     return std::make_unique<Sinus>(sample_rate_);
-  }
-	else if (sig_type == SIG_GEN_TYPE_SQUARE) {
+  } else if (sig_type == SIG_GEN_TYPE_SQUARE) {
     return std::make_unique<Square>(sample_rate_);
-  }
-	else if (sig_type == SIG_GEN_TYPE_TRIANGLE) {
+  } else if (sig_type == SIG_GEN_TYPE_TRIANGLE) {
     return std::make_unique<Triangle>(sample_rate_);
-  }
-	else if (sig_type == SIG_GEN_TYPE_SAW) {
+  } else if (sig_type == SIG_GEN_TYPE_SAW) {
     return std::make_unique<Saw>(sample_rate_);
   }
   return nullptr;

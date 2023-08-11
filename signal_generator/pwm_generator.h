@@ -143,12 +143,13 @@ inline PwmGenerator::PwmGenerator(SignalModulator sig_mod,
   */
 inline void PwmGenerator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
   // Reset();
-  if (pwm_value_ != 0.0f) {
-//    BufferParams(signal, param, value);
-    sig_mod_.SetSignal(signal, param, value);
-  } else {
-    sig_mod_.SetSignal(signal, param, value);
-  }
+  sig_mod_.SetSignal(signal, param, value);
+//  if (pwm_value_ != 0.0f) {
+////    BufferParams(signal, param, value);
+//    sig_mod_.SetSignal(signal, param, value);
+//  } else {
+//    sig_mod_.SetSignal(signal, param, value);
+//  }
 }
 
 /**

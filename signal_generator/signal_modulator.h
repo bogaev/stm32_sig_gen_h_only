@@ -214,8 +214,7 @@ inline void SignalModulator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE va
       return;
     }
     carrier_->SetParam(param, value);
-  }
-	else if (signal == SIG_GEN_AMP_MOD) {
+  } else if (signal == SIG_GEN_AMP_MOD) {
     if (param == SIG_GEN_PARAM_AMP_DEPTH) {
       amod_depth_percent_ = (uint8_t) value;
       return;
@@ -231,8 +230,7 @@ inline void SignalModulator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE va
       return;
     }
     amod_->SetParam(param, value);
-  }
-	else if (signal == SIG_GEN_FREQ_MOD) {
+  } else if (signal == SIG_GEN_FREQ_MOD) {
     if (param == SIG_GEN_PARAM_FREQ_DEPTH) {
       carrier_->SetFmodDepth(value);
       return;
