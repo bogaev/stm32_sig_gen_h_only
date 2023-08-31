@@ -151,6 +151,7 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
 				 stabilizer_settings,
 				 sg_handle->dead_time_th_percent);
 
+#if IT_GEN_TOTAL_NUM > 0 && IT_BUF_SIZE > 0
   if (sg_handle->pwm_mode == SIG_GEN_IT_MODE) {
     int next_buf_shift = it_gen_count_ * IT_BUF_SIZE;
     pwms_[sg_handle] = new IT_PwmController(sg_handle->pwm_timer,
@@ -162,15 +163,16 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
                                             IT_BUF_SIZE);
     ++it_gen_count_;
   }
+#endif
+
 #if DMA_GEN_TOTAL_NUM > 0 && DMA_BUF_SIZE > 0
-  else if (sg_handle->pwm_mode == SIG_GEN_DMA_MODE) {
+  if (sg_handle->pwm_mode == SIG_GEN_DMA_MODE) {
     int next_buf_shift = dma_gen_count_ * DMA_BUF_SIZE;
     pwms_[sg_handle] = new DMA_PwmController(sg_handle->pwm_timer,
                                             {sg_handle->channels[0],
                                              sg_handle->channels[1]},
                                              std::move(pwm_gen_),
-                                             BUF_MODE_SINGLE,
-                                     //      BUF_MODE_DOUBLE,
+                                             USE_DOUBLE_BUFFER,
                                              dma_data_buf + next_buf_shift,
                                              DMA_BUF_SIZE);
     ++dma_gen_count_;

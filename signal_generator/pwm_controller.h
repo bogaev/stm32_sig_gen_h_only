@@ -397,7 +397,7 @@ class DMA_PwmController : public PwmController {
   DMA_PwmController(TIM_HandleTypeDef* timer,
                     tdPwmChannels channels,
                     pwm_gen::PwmGenerator generator,
-                    BufferModeTypeDef buf_mode,
+                    bool is_double_buf,
                     BUF_DATA_TYPE* buf_ptr,
                     uint32_t buf_size);
   virtual ~DMA_PwmController();
@@ -423,7 +423,7 @@ class DMA_PwmController : public PwmController {
   void TaskDmaStart(void *argument); /// код задачи FreeRTOS запуска таймера
   void TaskBufUpd(void *argument); /// код задачи FreeRTOS обновления буфера
 
-  BufferModeTypeDef buf_mode_ = BUF_MODE_DOUBLE; /// режим буфера
+  bool is_double_buf_ = false; /// режим буфера
   BUF_DATA_TYPE* const buf_ptr_; /// указатель на начало буфера значений ШИМ
   uint32_t buf_size_; /// размер буфера значений ШИМ
 
@@ -445,11 +445,11 @@ class DMA_PwmController : public PwmController {
 inline DMA_PwmController::DMA_PwmController(TIM_HandleTypeDef* timer,
                                             tdPwmChannels channels,
                                             pwm_gen::PwmGenerator generator,
-                                            BufferModeTypeDef buf_mode,
+                                            bool is_double_buf,
                                             BUF_DATA_TYPE* buf_ptr,
                                             uint32_t buf_size)
 			: PwmController(timer, channels, std::move(generator))
-			, buf_mode_(buf_mode)
+			, is_double_buf_(is_double_buf)
 			, buf_ptr_(buf_ptr)
 			, buf_size_(buf_size)
 			, ch_buf_size_(buf_size_/2)
@@ -476,7 +476,7 @@ inline DMA_PwmController::DMA_PwmController(TIM_HandleTypeDef* timer,
     std::make_unique<RTOSTaskWrapper>("buf_upd", RTOS_TASK_STACK_SIZE, osPriorityNormal,
                                       std::function<void(void*)>(std::bind(&DMA_PwmController::TaskBufUpd, this, std::placeholders::_1)));
 
-  if (buf_mode_ != BUF_MODE_SINGLE) {
+  if (is_double_buf_) {
     HAL_TIM_RegisterCallback(timer_, HAL_TIM_PWM_PULSE_FINISHED_HALF_CB_ID, PWM_PulseHalfFinishedCallback);
     HAL_TIM_RegisterCallback(timer_, HAL_TIM_PWM_PULSE_FINISHED_CB_ID, PWM_PulseFinishedCallback);
   }
@@ -496,7 +496,7 @@ inline DMA_PwmController::~DMA_PwmController() {
 
 inline void DMA_PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
   PwmController::SetSignal(signal, param, value);
-  if (buf_mode_ == BUF_MODE_SINGLE) {
+  if (!is_double_buf_) {
     osSemaphoreRelease(upd_buf_sem_);
   }
 }
@@ -513,7 +513,7 @@ inline void DMA_PwmController::StartBufferUpdate() {
 inline void DMA_PwmController::Start() {
   StartBufferUpdate();
   if (!buf_ready_callback_ || !buf_ready_callback_->isValid()) {
-          Run();
+    Run();
   }
 }
 
@@ -546,7 +546,7 @@ inline void DMA_PwmController::TaskDmaStart(void *argument) {
 inline void DMA_PwmController::TaskBufUpd(void *argument) {
   for(;;) {
     if (osSemaphoreAcquire(upd_buf_sem_, osWaitForever) == osOK) {
-      if (buf_mode_ == BUF_MODE_DOUBLE) {
+      if (is_double_buf_) {
         SwitchFrame();
         UpdateFrame(ch_buf_size_ / 2);
       } else {
