@@ -20,14 +20,33 @@
 
 namespace pwm_gen {
 
-const FP_TYPE amp_coeff[3][2] = {
-  { 1.0f,  0.15f },
-  { 0.6f,  1.7f  },
-  { 0.45f, 1.7f  }
-};
+//const SIG_GEN_RangeCoeff corr_amp[] = {
+//  { .from = 0, .to = 3, .coeff = 100.0 }
+//};
+//
+//const SIG_GEN_RangeCoeff corr_freq[] = {
+//  { .from = 0, .to = 100, .coeff = 97 },
+//  { .from = 100, .to = 150, .coeff = 100 },
+//  { .from = 150, .to = 200, .coeff = 103 },
+//  { .from = 200, .to = 250, .coeff = 108 },
+//  { .from = 250, .to = 300, .coeff = 110 },
+//  { .from = 300, .to = 400, .coeff = 113 },
+//  { .from = 400, .to = 450, .coeff = 118 },
+//  { .from = 450, .to = 600, .coeff = 125 },
+//  { .from = 600, .to = 800, .coeff = 140 },
+//  { .from = 800, .to = 900, .coeff = 165 },
+//  { .from = 900, .to = CARRIER_FREQ_MAX_HZ, .coeff = 185 }
+//};
+//
+//SIG_GEN_CoeffsInitStruct corr_coeff = {
+//  corr_amp,
+//  1,
+//  corr_freq,
+//  11
+//};
 
 class SignalStabilizer final {
- public:
+public:
   struct Settings {
     const SIG_GEN_CoeffsInitStruct* coeffs = nullptr;
   };
@@ -39,19 +58,15 @@ class SignalStabilizer final {
   {}
 
   FP_TYPE GetAmpCoeff(FP_TYPE current_amp) const {
-    return GetCoeff(current_amp,
-                    coeffs_->amp_array,
-                    coeffs_->amp_array_size);
+    return GetCoeff(current_amp, coeffs_->amp_array, coeffs_->amp_array_size);
   }
 
   FP_TYPE GetFreqCoeff(FP_TYPE current_freq) const {
-    return GetCoeff(current_freq,
-                    coeffs_->freq_array,
-                    coeffs_->freq_array_size);
+    return GetCoeff(current_freq, coeffs_->freq_array, coeffs_->freq_array_size);
   }
 
  private:
-  FP_TYPE GetCoeff(FP_TYPE value, SIG_GEN_RangeCoeff* array, uint32_t size) const {
+  FP_TYPE GetCoeff(FP_TYPE value, const SIG_GEN_RangeCoeff* array, uint32_t size) const {
     for (uint32_t i = 0; i < size; ++i) {
       if (value >= array[i].from && value < array[i].to) {
         return array[i].coeff / 100.0f;
@@ -186,17 +201,17 @@ inline bool PwmGenerator::IsNegHalfwave() const {
 
 inline FP_TYPE PwmGenerator::GetMinDutyCycle() const {
   return min_duty_cycle_;
-  // * (stabilizer_ ? stabilizer_->GetFreqCoeff(sig_mod_.GetFreq()) : 1.);
+//    * (stabilizer_ ? stabilizer_->GetFreqCoeff(sig_mod_.GetFreq()) : 1.0f);
 }
 
 inline FP_TYPE PwmGenerator::GetMaxDutyCycle() const {
-  return max_duty_cycle_;
-  // * (stabilizer_ ? stabilizer_->GetFreqCoeff(sig_mod_.GetFreq()) : 1.);
+  return max_duty_cycle_
+    * (stabilizer_ ? stabilizer_->GetFreqCoeff(sig_mod_.GetFreq()) : 1.0f);
 }
 
 inline FP_TYPE PwmGenerator::GetRangeDutyCycle() const {
-  return (GetMaxDutyCycle() - GetMinDutyCycle());
-  // * (stabilizer_ ? stabilizer_->GetAmpCoeff(sig_mod_.GetAmp()) : 1.);
+  return (GetMaxDutyCycle() - GetMinDutyCycle())
+    * (stabilizer_ ? stabilizer_->GetAmpCoeff(sig_mod_.GetAmp()) : 1.0f);
 }
 
 inline void PwmGenerator::CheckDeadTimeBasedOnPeriod() {

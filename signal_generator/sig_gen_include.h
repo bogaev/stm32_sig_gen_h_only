@@ -11,8 +11,7 @@ extern "C" {
 #endif
 
 // Cтруктура инициализации генератора сигналов
-typedef struct
-{
+typedef struct {
   TIM_HandleTypeDef* pwm_timer;     // указатель на структуру ШИМ-генератора HAL
   TIM_HandleTypeDef* sample_timer;  // указатель на структуру таймера HAL для семплирования сигнала
   SIG_GEN_ModeTypeDef pwm_mode;     // режим работы таймера IT / DMA
@@ -36,7 +35,7 @@ SIG_GEN_StatusTypeDef SIG_GEN_SetAmpModDepth(SIG_GEN_HandleTypeDef* sg_handle, u
 SIG_GEN_StatusTypeDef SIG_GEN_SetFreqModSens(SIG_GEN_HandleTypeDef* sg_handle, uint8_t percent);
 SIG_GEN_StatusTypeDef SIG_GEN_SetSignal(SIG_GEN_HandleTypeDef* sg_handle, uint8_t signal, uint8_t param, FP_TYPE value);
 SIG_GEN_StatusTypeDef SIG_GEN_CommitChanges(SIG_GEN_HandleTypeDef* sg_handle);
-void SIG_GEN_Run(SIG_GEN_HandleTypeDef* sg_handle);
+                 void SIG_GEN_Run(SIG_GEN_HandleTypeDef* sg_handle);
 
 #ifdef __cplusplus
 }

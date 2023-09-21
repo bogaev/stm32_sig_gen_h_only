@@ -30,6 +30,7 @@ class SignalGenerator {
   SIG_GEN_StatusTypeDef Stop(SIG_GEN_HandleTypeDef* sg_handle);
   SIG_GEN_StatusTypeDef Resume(SIG_GEN_HandleTypeDef* sg_handle);
   SIG_GEN_StatusTypeDef Pause(SIG_GEN_HandleTypeDef* sg_handle);
+  void                  PauseAll();
   // удаление генератора
   SIG_GEN_StatusTypeDef DeletePwm(SIG_GEN_HandleTypeDef* sg_handle);
   // изменение типа сигнала
@@ -49,7 +50,8 @@ class SignalGenerator {
  private:
   SignalGenerator() = default;
 
-  SIG_GEN_StatusTypeDef CheckCorrStruct(SIG_GEN_RangeCoeff* array, uint32_t size);
+  SIG_GEN_StatusTypeDef CheckCorrStruct(const SIG_GEN_RangeCoeff* array, uint32_t size);
+  pwm_gen::SignalStabilizer::Settings CheckCorrCoeff(const SIG_GEN_CoeffsInitStruct* corr_coeff);
 
 #if DMA_GEN_TOTAL_NUM > 0 && DMA_BUF_SIZE > 0
   inline static BUF_DATA_TYPE dma_data_buf[DMA_GEN_TOTAL_NUM * DMA_BUF_SIZE] = {0};  // буфер данных DMA
@@ -68,7 +70,7 @@ inline SignalGenerator& SignalGenerator::GetInstance() {
   return sig_gen;
 }
 
-inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(SIG_GEN_RangeCoeff* array, uint32_t size) {
+inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(const SIG_GEN_RangeCoeff* array, uint32_t size) {
   if (array[0].from != 0) {
     return SIG_GEN_ERROR_INCORRECT_BOUNDS;
   }
@@ -82,6 +84,26 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::CheckCorrStruct(SIG_GEN_RangeCoeff
   }
 
   return SIG_GEN_OK;
+}
+
+inline pwm_gen::SignalStabilizer::Settings SignalGenerator::CheckCorrCoeff(const SIG_GEN_CoeffsInitStruct* corr_coeff) {
+  pwm_gen::SignalStabilizer::Settings default_settings = { nullptr };
+  if (corr_coeff == nullptr) {
+    return default_settings;
+  }
+  {
+    auto err = CheckCorrStruct(corr_coeff->amp_array, corr_coeff->amp_array_size);
+    if (err) {
+      return default_settings;
+    }
+  }
+  {
+    auto err = CheckCorrStruct(corr_coeff->freq_array, corr_coeff->freq_array_size);
+    if (err) {
+      return default_settings;
+    }
+  }
+  return pwm_gen::SignalStabilizer::Settings { corr_coeff };
 }
 
 inline SIG_GEN_StatusTypeDef SignalGenerator::Start(SIG_GEN_HandleTypeDef* sg_handle) {
@@ -113,11 +135,6 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
     return SIG_GEN_ERROR_PWM_TIMER_NOT_SET;
   }
 
-  //  FP_TYPE sample_rate =
-  //    sg_handle->coeffs ?
-  //      sg_handle->coeffs->freq_array[sg_handle->coeffs->freq_array_size-1].to * 2.
-  //        : 1000.;
-
   FP_TYPE sample_rate = SAMPLE_RATE;
 
   SignalModulator sig_mod((uint32_t)sample_rate);
@@ -127,24 +144,7 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
   duty_cycle_settings.max_percent = (FP_TYPE)sg_handle->max_duty_cycle_percent;
   duty_cycle_settings.timer_period = (FP_TYPE)sg_handle->pwm_timer->Init.Period;
 
-  pwm_gen::SignalStabilizer::Settings stabilizer_settings = {0};
-  if (sg_handle->coeffs != 0) {
-    {
-      auto err = CheckCorrStruct(sg_handle->coeffs->amp_array,
-                                 sg_handle->coeffs->amp_array_size);
-      if (err) {
-        return err;
-      }
-    }
-    {
-      auto err = CheckCorrStruct(sg_handle->coeffs->freq_array,
-                                 sg_handle->coeffs->freq_array_size);
-      if (err) {
-        return err;
-      }
-    }
-    stabilizer_settings.coeffs = sg_handle->coeffs;
-  }
+  auto stabilizer_settings = CheckCorrCoeff(sg_handle->coeffs);
 
   pwm_gen::PwmGenerator pwm_gen_(std::move(sig_mod),
 				 duty_cycle_settings,
