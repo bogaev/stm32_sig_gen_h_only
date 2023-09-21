@@ -288,14 +288,14 @@ inline IT_PwmController::~IT_PwmController() {
 }
 
 inline void IT_PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
-  CheckChannelStatus(signal, param, value);
+//  CheckChannelStatus(signal, param, value);
   PwmController::SetSignal(signal, param, value);
 }
 
 inline void IT_PwmController::CommitChanges() {
-  if (!IsPaused()) {
+//  if (!IsPaused()) {
     osSemaphoreRelease(upd_buf_sem_);
-  }
+//  }
 }
 
 inline void IT_PwmController::Start() {
@@ -357,9 +357,13 @@ inline void IT_PwmController::Run() {
 inline void IT_PwmController::TaskBufUpd(void *argument) {
   for(;;) {
     if (osSemaphoreAcquire(upd_buf_sem_, osWaitForever) == osOK) {
-      Pause();
+//      RELAY_TRI_STATE();
+//      LED_OFF(LED3_RELAY_GROUND_GPIO_Port, LED3_RELAY_GROUND_Pin);
+//      Pause();
       UpdateBuffer();
-      Resume();
+//      Resume();
+//      RELAY_GROUND();
+//      LED_ON(LED3_RELAY_GROUND_GPIO_Port, LED3_RELAY_GROUND_Pin);
     }
   }
 }
