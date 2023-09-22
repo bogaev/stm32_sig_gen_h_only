@@ -72,11 +72,9 @@ class SignalModulator : public _pattern::Observer<tdSignalParams> {
 
 inline SignalModulator::SignalModulator(uint32_t sample_rate)
   : sample_rate_(sample_rate)
-//  , carrier_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_SINUS)) //!!
   , carrier_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
   , amod_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
   , fmod_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
-//  , amp_mod_period_(1)
 {
   SharedObjects::signal_updater.RegisterObserver(this);
 }
@@ -124,9 +122,6 @@ inline FP_TYPE SignalModulator::GetValue() {
     mod_sig_value_ = 0.0f; // если не задано никакого сигнала - выводится 0
   }
   ++sample_;
-//  if (sample_ > 0 && (sample_ % amp_mod_period_) < uint32_t(amp_mod_period_ * 0.01)) {
-//    SharedObjects::mod_period_end.NotifyObservers();
-//  }
   return mod_sig_value_;
 }
 
@@ -142,10 +137,17 @@ inline SignalModulator& SignalModulator::GenerateCarrier() {
   * @brief  Добавляет амплитудную модуляцию к несущему сигналу
   *         с учетом глубины модуляции (amod_depth_percent_)
   */
+//inline SignalModulator& SignalModulator::AddAmpMod() {
+//  mod_sig_value_ *= (std::abs(amod_->GetValue(sample_))
+//            * ((FP_TYPE)amod_depth_percent_ / 100.0f)
+//                + (1.0f - (FP_TYPE)amod_depth_percent_ / 100.0f));
+//  return *this;
+//}
+
 inline SignalModulator& SignalModulator::AddAmpMod() {
-  mod_sig_value_ *= (std::abs(amod_->GetValue(sample_))
+  mod_sig_value_ *= (amod_->GetValue(sample_) + 1.0) * 0.5
             * ((FP_TYPE)amod_depth_percent_ / 100.0f)
-                + (1.0f - (FP_TYPE)amod_depth_percent_ / 100.0f));
+                + (1.0f - (FP_TYPE)amod_depth_percent_ / 100.0f);
   return *this;
 }
 
@@ -226,12 +228,10 @@ inline void SignalModulator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE va
     }
     if (param == SIG_GEN_PARAM_SIGNAL_TYPE) {
       amod_ = Signal(sample_rate_).Create(static_cast<enSignalTypes>(value));
-//      amp_mod_period_ = uint32_t((1.f / amod_->GetFreq()) * sample_rate_);
       return;
     }
     if (param == SIG_GEN_PARAM_FREQ) {
       amod_->SetParam(param, value / 2);
-//      amp_mod_period_ = uint32_t((1.f / amod_->GetFreq()) * sample_rate_);
       return;
     }
     amod_->SetParam(param, value);
@@ -252,8 +252,7 @@ inline void SignalModulator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE va
   }
 }
 
-inline void SignalModulator::Reset()
-{
+inline void SignalModulator::Reset() {
   sample_ = 0;
   mod_sig_value_ = 0.0f;
 }
