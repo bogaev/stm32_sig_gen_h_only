@@ -15,6 +15,7 @@
 
 #include <cmath>
 #include <memory>
+#include <utility>
 
 /**
   * @brief  Класс абстрактного сигнала
@@ -49,8 +50,8 @@ class Signal {
     * @param  sig сигнал, которым модулируется частота текущего сигнала
     * @retval Значение сигнала в точке point
     */
-  virtual FP_TYPE FreqMod(uint32_t point, Signal& sig) const {
-    return 0.0f;
+  virtual std::pair<FP_TYPE, FP_TYPE> FreqMod(uint32_t point, Signal& sig) const {
+    return std::make_pair(0, 0);
   }
   /**
     * @brief  Вычисляет значение интеграла текущего сигнала.
@@ -85,7 +86,7 @@ class Sinus : public Signal {
  public:
   Sinus(uint32_t sample_timer_period);
   FP_TYPE GetValue(uint32_t point) const override;
-  FP_TYPE FreqMod(uint32_t point, Signal& fmod) const override;
+  std::pair<FP_TYPE, FP_TYPE> FreqMod(uint32_t point, Signal& fmod) const override;
   FP_TYPE GetIntegral(uint32_t point) const override;
   enSignalTypes inline GetSignalType() const override {
     return SIG_GEN_TYPE_SINUS;
@@ -99,7 +100,7 @@ class Square : public Signal {
  public:
   Square(uint32_t sample_timer_period);
   FP_TYPE GetValue(uint32_t point) const override;
-  FP_TYPE FreqMod(uint32_t point, Signal& fmod) const override;
+  std::pair<FP_TYPE, FP_TYPE> FreqMod(uint32_t point, Signal& fmod) const override;
   FP_TYPE GetIntegral(uint32_t point) const override;
   enSignalTypes inline GetSignalType() const override {
     return SIG_GEN_TYPE_SQUARE;
@@ -116,7 +117,7 @@ class Triangle : public Signal {
  public:
   Triangle(uint32_t sample_timer_period);
   FP_TYPE GetValue(uint32_t point) const override;
-  FP_TYPE FreqMod(uint32_t point, Signal& fmod) const override;
+  std::pair<FP_TYPE, FP_TYPE> FreqMod(uint32_t point, Signal& fmod) const override;
   FP_TYPE GetIntegral(uint32_t point) const override;
   enSignalTypes inline GetSignalType() const override
 	{
@@ -134,7 +135,7 @@ class Saw : public Signal {
  public:
   Saw(uint32_t sample_timer_period);
   FP_TYPE GetValue(uint32_t point) const override;
-  FP_TYPE FreqMod(uint32_t point, Signal& fmod) const override;
+  std::pair<FP_TYPE, FP_TYPE> FreqMod(uint32_t point, Signal& fmod) const override;
   FP_TYPE GetIntegral(uint32_t point) const override;
   enSignalTypes inline GetSignalType() const override {
     return SIG_GEN_TYPE_SAW;
@@ -212,12 +213,21 @@ inline FP_TYPE Sinus::GetValue(uint32_t point) const {
   return amp_ * std::sinf(2.0f * pi * freq_ * t);
 }
 
-inline FP_TYPE Sinus::FreqMod(uint32_t point, Signal& fmod) const {
+//inline FP_TYPE Sinus::FreqMod(uint32_t point, Signal& fmod) const {
+//  FP_TYPE t = (FP_TYPE)point / sample_rate_;
+//  return amp_ * std::sinf(2.0f * pi * freq_ * t
+//                         + (freq_ - fmod.GetFreq()) / fmod.GetFreq()
+//                         * (5.0f * fmod_depth_percent_ / 100.0f)
+//                         * fmod.GetIntegral(point));
+//}
+
+inline std::pair<FP_TYPE, FP_TYPE> Sinus::FreqMod(uint32_t point, Signal& fmod) const {
   FP_TYPE t = (FP_TYPE)point / sample_rate_;
-  return amp_ * std::sinf(2.0f * pi * freq_ * t
-                         + (freq_ - fmod.GetFreq()) / fmod.GetFreq()
-                         * (5.0f * fmod_depth_percent_ / 100.0f)
-                         * fmod.GetIntegral(point));
+  FP_TYPE beta = fmod_depth_percent_ / 100.f; // индекс модуляции
+  FP_TYPE phase = 2.f * pi * freq_ * t + beta * fmod.GetIntegral(point);
+  FP_TYPE result_amp = amp_ * std::sinf(phase);
+  FP_TYPE instant_freq = freq_ + beta * fmod.GetFreq() * fmod.GetValue(point); // Мгновенная частота
+  return std::make_pair(result_amp, instant_freq);
 }
 
 inline FP_TYPE Sinus::GetIntegral(uint32_t point) const {
@@ -237,8 +247,8 @@ inline FP_TYPE Square::GetValue(uint32_t point) const {
   return square(t);
 }
 
-inline FP_TYPE Square::FreqMod(uint32_t point, Signal& /*fmod*/) const {
-  return GetValue(point);
+inline std::pair<FP_TYPE, FP_TYPE> Square::FreqMod(uint32_t point, Signal& /*fmod*/) const {
+  return std::make_pair(0, 0);
 }
 
 inline FP_TYPE Square::GetIntegral(uint32_t point) const {
@@ -269,8 +279,8 @@ inline FP_TYPE Triangle::GetValue(uint32_t point) const {
   return amp_ * triangle(t);
 }
 
-inline FP_TYPE Triangle::FreqMod(uint32_t point, Signal& /*fmod*/) const {
-  return GetValue(point);
+inline std::pair<FP_TYPE, FP_TYPE> Triangle::FreqMod(uint32_t point, Signal& /*fmod*/) const {
+  return std::make_pair(0, 0);
 }
 
 inline FP_TYPE Triangle::GetIntegral(uint32_t point) const {
@@ -308,8 +318,8 @@ inline FP_TYPE Saw::GetValue(uint32_t point) const {
   return amp_ * sawtooth(t);
 }
 
-inline FP_TYPE Saw::FreqMod(uint32_t point, Signal& /*fmod*/) const {
-  return GetValue(point);
+inline std::pair<FP_TYPE, FP_TYPE> Saw::FreqMod(uint32_t point, Signal& /*fmod*/) const {
+  return std::make_pair(0, 0);
 }
 
 inline FP_TYPE Saw::GetIntegral(uint32_t point) const {

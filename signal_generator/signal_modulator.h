@@ -21,6 +21,9 @@
 #include "utility\shared_objects.h"
 #include "app\common.h"
 
+static uint16_t fmax_dbg = 0;
+static uint16_t fmin_dbg = 0xFFFF;
+
 namespace pwm_gen {
   class PwmGenerator;
 }
@@ -43,8 +46,8 @@ class SignalModulator : public _pattern::Observer<tdSignalParams> {
 
   FP_TYPE GetValue();
   FP_TYPE GetAmp() const;
-  FP_TYPE GetFreq(enSignals signal = SIG_GEN_CARRIER) const;
-  FP_TYPE GetPeriod(enSignals signal = SIG_GEN_CARRIER) const;
+  FP_TYPE GetFreq() const;
+  FP_TYPE GetPeriod() const;
   enSignalTypes GetCarrierType() const;
   void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value);
   void Update(tdSignalParams msg) override;
@@ -60,9 +63,10 @@ class SignalModulator : public _pattern::Observer<tdSignalParams> {
   std::unique_ptr<Signal> carrier_; /// сигнал с параметрами несущего сигнала
   std::unique_ptr<Signal> amod_; /// сигнал с параметрами частотной модуляции
   std::unique_ptr<Signal> fmod_; /// сигнал с параметрами частотной модуляции
-//  uint32_t amp_mod_period_;
+
   uint8_t amod_depth_percent_ = 100;
-  FP_TYPE mod_sig_value_ = 0.0f;
+  FP_TYPE mod_sig_value_ = 0.f;
+  FP_TYPE mod_sig_freq_ = 0.f;
   uint32_t sample_ = 0; // номер текущего семпла (точки) для которого вычислется значение
 };
 
@@ -138,8 +142,7 @@ inline SignalModulator& SignalModulator::GenerateCarrier() {
   * @brief  Добавляет амплитудную модуляцию к несущему сигналу
   *         с учетом глубины модуляции (amod_depth_percent_)
   */
-inline SignalModulator& SignalModulator::AddAmpMod()
-{
+inline SignalModulator& SignalModulator::AddAmpMod() {
   mod_sig_value_ *= (std::abs(amod_->GetValue(sample_))
             * ((FP_TYPE)amod_depth_percent_ / 100.0f)
                 + (1.0f - (FP_TYPE)amod_depth_percent_ / 100.0f));
@@ -149,9 +152,12 @@ inline SignalModulator& SignalModulator::AddAmpMod()
 /**
   * @brief  Вычисляет значение частотно-модулированного сигнала
   */
-inline SignalModulator& SignalModulator::GenerateFreqMod()
-{
-  mod_sig_value_ = carrier_->FreqMod(sample_, *fmod_);
+inline SignalModulator& SignalModulator::GenerateFreqMod() {
+  auto [val, freq] = carrier_->FreqMod(sample_, *fmod_);
+  mod_sig_value_ = val;
+  mod_sig_freq_ = freq;
+  if (mod_sig_freq_ > fmax_dbg) fmax_dbg = (uint16_t) mod_sig_freq_;
+  if (mod_sig_freq_ < fmin_dbg) fmin_dbg = (uint16_t) mod_sig_freq_;
   return *this;
 }
 
@@ -159,9 +165,7 @@ inline SignalModulator& SignalModulator::GenerateFreqMod()
   * @brief  Возвращает значение амплитуды несущего сигнала
   * @retval Значение амплитуды несущего сигнала
   */
-inline FP_TYPE SignalModulator::GetAmp() const
-{
-  // TODO
+inline FP_TYPE SignalModulator::GetAmp() const {
   return carrier_->GetAmp();
 }
 
@@ -173,20 +177,21 @@ inline FP_TYPE SignalModulator::GetAmp() const
   * @param  signal сигнал, частота которого возвращается
   * @retval Значение частоты выбранного сигнала
   */
-inline FP_TYPE SignalModulator::GetFreq(enSignals signal) const
-{
-  if (signal == SIG_GEN_CARRIER) {
+inline FP_TYPE SignalModulator::GetFreq() const {
+  if (carrier_ && amod_ && fmod_) { // если все сигналы != nullptr
+    return mod_sig_freq_;
+  } else if (carrier_ && amod_) { // если сигналы carrier_ и amod_ != nullptr
     return carrier_->GetFreq();
-  } else if (signal == SIG_GEN_AMP_MOD) {
-    return amod_->GetFreq();
-  } else if (signal == SIG_GEN_FREQ_MOD) {
-    return fmod_->GetFreq();
+  } else if (carrier_ && fmod_) { // если сигналы carrier_ и fmod_ != nullptr
+    return mod_sig_freq_;
+  } else if (carrier_) { // если задан только несущий сигнал
+    return carrier_->GetFreq();
   }
-  return 0.0f;
+  return 1.0f;
 }
 
-inline FP_TYPE SignalModulator::GetPeriod(enSignals signal) const {
-  return 1.0f / GetFreq(signal);
+inline FP_TYPE SignalModulator::GetPeriod() const {
+  return 1.0f / GetFreq();
 }
 
 inline enSignalTypes SignalModulator::GetCarrierType() const {
