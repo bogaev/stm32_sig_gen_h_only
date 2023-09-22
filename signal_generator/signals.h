@@ -210,23 +210,15 @@ inline Sinus::Sinus(uint32_t sample_timer_period)
 
 inline FP_TYPE Sinus::GetValue(uint32_t point) const {
   FP_TYPE t = (FP_TYPE)point / sample_rate_;
-  return amp_ * std::sinf(2.0f * pi * freq_ * t);
+  return amp_ * std::sinf(2.f * pi * freq_ * t);
 }
-
-//inline FP_TYPE Sinus::FreqMod(uint32_t point, Signal& fmod) const {
-//  FP_TYPE t = (FP_TYPE)point / sample_rate_;
-//  return amp_ * std::sinf(2.0f * pi * freq_ * t
-//                         + (freq_ - fmod.GetFreq()) / fmod.GetFreq()
-//                         * (5.0f * fmod_depth_percent_ / 100.0f)
-//                         * fmod.GetIntegral(point));
-//}
 
 inline std::pair<FP_TYPE, FP_TYPE> Sinus::FreqMod(uint32_t point, Signal& fmod) const {
   FP_TYPE t = (FP_TYPE)point / sample_rate_;
   FP_TYPE beta = fmod_depth_percent_ / 100.f; // индекс модуляции
   FP_TYPE phase = 2.f * pi * freq_ * t + beta * fmod.GetIntegral(point);
   FP_TYPE result_amp = amp_ * std::sinf(phase);
-  FP_TYPE instant_freq = freq_ + beta * fmod.GetFreq() * fmod.GetValue(point); // Мгновенная частота
+  FP_TYPE instant_freq = freq_ + beta * fmod.GetFreq() * fmod.GetValue(point);
   return std::make_pair(result_amp, instant_freq);
 }
 

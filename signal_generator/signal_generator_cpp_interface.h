@@ -179,8 +179,6 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::AddPwm(SIG_GEN_HandleTypeDef* sg_h
   }
 #endif
 
-//  pwms_[sg_handle]->Start();
-
   return SIG_GEN_OK;
 }
 
@@ -212,11 +210,6 @@ inline SIG_GEN_StatusTypeDef SignalGenerator::SetCarrierAmp(SIG_GEN_HandleTypeDe
 }
 
 inline SIG_GEN_StatusTypeDef SignalGenerator::SetFreq(SIG_GEN_HandleTypeDef* sg_handle, enSignals signal, FP_TYPE value) {
-//  FP_TYPE sample_rate =
-//    sg_handle->coeffs ?
-//      sg_handle->coeffs->freq_array[sg_handle->coeffs->freq_array_size-1].to * 2.
-//        : 1000.;
-
   FP_TYPE sample_rate = SAMPLE_RATE;
 
   if (value >= sample_rate / 2.0f) {

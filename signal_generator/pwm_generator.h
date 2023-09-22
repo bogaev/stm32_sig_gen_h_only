@@ -102,9 +102,6 @@ class PwmGenerator final {
   void SetSignal(uint8_t signal, uint8_t param, FP_TYPE value);
   uint32_t GetValue();
   bool IsNegHalfwave() const;
-//  const SignalModulator& SigGen() {
-//    return sig_mod_;
-//  }
 
  private:
   struct tdSignalParamsBuffer {
@@ -159,12 +156,6 @@ inline PwmGenerator::PwmGenerator(SignalModulator sig_mod,
 inline void PwmGenerator::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
   // Reset();
   sig_mod_.SetSignal(signal, param, value);
-//  if (pwm_value_ != 0.0f) {
-////    BufferParams(signal, param, value);
-//    sig_mod_.SetSignal(signal, param, value);
-//  } else {
-//    sig_mod_.SetSignal(signal, param, value);
-//  }
 }
 
 /**
@@ -176,9 +167,6 @@ inline uint32_t PwmGenerator::GetValue() {
 
   if (     (pwm_value_ >= 0.0f && is_neg_halfwave_)
         || (pwm_value_ <= 0.0f && !is_neg_halfwave_)) {
-//    while (!buffer_params_.empty()) {
-//      CommitChanges(sig_mod_);
-//    }
     is_neg_halfwave_ = !is_neg_halfwave_;
   }
 

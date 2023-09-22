@@ -14,7 +14,6 @@
 #include <functional>
 #include <unordered_map>
 #include <vector>
-//#include <assert.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -288,14 +287,11 @@ inline IT_PwmController::~IT_PwmController() {
 }
 
 inline void IT_PwmController::SetSignal(uint8_t signal, uint8_t param, FP_TYPE value) {
-//  CheckChannelStatus(signal, param, value);
   PwmController::SetSignal(signal, param, value);
 }
 
 inline void IT_PwmController::CommitChanges() {
-//  if (!IsPaused()) {
     osSemaphoreRelease(upd_buf_sem_);
-//  }
 }
 
 inline void IT_PwmController::Start() {
@@ -329,7 +325,6 @@ inline bool IT_PwmController::IsPaused() const {
 
 inline void IT_PwmController::Run() {
   auto dc = buf_ptr_[index_++];
-//  duty_cycle_monitor = dc;
   if (dc < 0) { // TODO убрать зависимость от знака числа?
     __HAL_TIM_SET_COMPARE(timer_, channels_.pos_halfwave_channel, 0);
     __HAL_TIM_SET_COMPARE(timer_, channels_.neg_halfwave_channel, -dc);
@@ -357,13 +352,7 @@ inline void IT_PwmController::Run() {
 inline void IT_PwmController::TaskBufUpd(void *argument) {
   for(;;) {
     if (osSemaphoreAcquire(upd_buf_sem_, osWaitForever) == osOK) {
-//      RELAY_TRI_STATE();
-//      LED_OFF(LED3_RELAY_GROUND_GPIO_Port, LED3_RELAY_GROUND_Pin);
-//      Pause();
       UpdateBuffer();
-//      Resume();
-//      RELAY_GROUND();
-//      LED_ON(LED3_RELAY_GROUND_GPIO_Port, LED3_RELAY_GROUND_Pin);
     }
   }
 }

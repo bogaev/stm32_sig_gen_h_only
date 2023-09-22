@@ -74,9 +74,8 @@ inline SignalModulator::SignalModulator(uint32_t sample_rate)
   : sample_rate_(sample_rate)
   , carrier_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
   , amod_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
-  , fmod_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE))
-{
-  SharedObjects::signal_updater.RegisterObserver(this);
+  , fmod_(Signal{sample_rate_}.Create(SIG_GEN_TYPE_NONE)) {
+      SharedObjects::signal_updater.RegisterObserver(this);
 }
 
 inline SignalModulator::SignalModulator(uint32_t sample_rate,
@@ -86,10 +85,8 @@ inline SignalModulator::SignalModulator(uint32_t sample_rate,
   : sample_rate_(sample_rate)
   , carrier_(Signal{sample_rate_}.Create(carrier))
   , amod_(Signal{sample_rate_}.Create(amod))
-  , fmod_(Signal{sample_rate_}.Create(fmod))
-//  , amp_mod_period_(amod_ ? uint32_t((1.f / amod_->GetFreq()) * sample_rate_) : 1)
-{
-  SharedObjects::signal_updater.RegisterObserver(this);
+  , fmod_(Signal{sample_rate_}.Create(fmod)) {
+    SharedObjects::signal_updater.RegisterObserver(this);
 }
 
 inline SignalModulator::~SignalModulator() {
@@ -114,10 +111,7 @@ inline FP_TYPE SignalModulator::GetValue() {
   } else if (carrier_ && fmod_) { // если сигналы carrier_ и fmod_ != nullptr
     GenerateFreqMod();
   } else if (carrier_) { // если задан только несущий сигнал
-//    StartCyclesCounter();
     GenerateCarrier();
-//    cycles_num = GetCyclesCounter();
-//    StopCyclesCounter();
   } else {
     mod_sig_value_ = 0.0f; // если не задано никакого сигнала - выводится 0
   }
@@ -137,13 +131,6 @@ inline SignalModulator& SignalModulator::GenerateCarrier() {
   * @brief  Добавляет амплитудную модуляцию к несущему сигналу
   *         с учетом глубины модуляции (amod_depth_percent_)
   */
-//inline SignalModulator& SignalModulator::AddAmpMod() {
-//  mod_sig_value_ *= (std::abs(amod_->GetValue(sample_))
-//            * ((FP_TYPE)amod_depth_percent_ / 100.0f)
-//                + (1.0f - (FP_TYPE)amod_depth_percent_ / 100.0f));
-//  return *this;
-//}
-
 inline SignalModulator& SignalModulator::AddAmpMod() {
   mod_sig_value_ *= (amod_->GetValue(sample_) + 1.0) * 0.5
             * ((FP_TYPE)amod_depth_percent_ / 100.0f)
@@ -158,8 +145,6 @@ inline SignalModulator& SignalModulator::GenerateFreqMod() {
   auto [val, freq] = carrier_->FreqMod(sample_, *fmod_);
   mod_sig_value_ = val;
   mod_sig_freq_ = freq;
-  if (mod_sig_freq_ > fmax_dbg) fmax_dbg = (uint16_t) mod_sig_freq_;
-  if (mod_sig_freq_ < fmin_dbg) fmin_dbg = (uint16_t) mod_sig_freq_;
   return *this;
 }
 
